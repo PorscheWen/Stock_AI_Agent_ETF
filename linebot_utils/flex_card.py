@@ -94,7 +94,7 @@ def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
             {
                 "type": "box",
                 "layout": "vertical",
-                "flex": 3,
+                "flex": 6,
                 "contents": [
                     {"type": "text", "text": "最新收盤價", "size": "xs", "color": "#888888"},
                     {"type": "text", "text": f"NT$ {price:.2f}", "size": "xl", "weight": "bold", "color": "#212121"},
@@ -108,7 +108,7 @@ def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
             {
                 "type": "box",
                 "layout": "vertical",
-                "flex": 3,
+                "flex": 4,
                 "paddingStart": "12px",
                 "contents": [
                     {"type": "text", "text": "AI 綜合判斷", "size": "xs", "color": "#888888"},
