@@ -173,8 +173,9 @@ def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
     }
 
     # ── 各 Agent 訊號明細（只顯示前三個 Agent 的訊號，避免卡片過長）──────────
+    _SECTION_TITLES = ["📊 技術面訊號", "📦 量能訊號", "🔭 趨勢訊號"]
     signal_sections = []
-    for r in agent_results[:3]:   # 顯示技術、量能、趨勢三個 agent
+    for r, title in zip(agent_results[:3], _SECTION_TITLES):
         rows = []
         for sig in r["signals"][:4]:  # 每個 agent 最多顯示 4 個訊號
             color = _SIGNAL_COLORS.get(sig["bullish"], "#546E7A")
@@ -208,7 +209,7 @@ def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
                 "layout": "vertical",
                 "margin": "md",
                 "contents": [
-                    _section_title(r["agent"]),
+                    _section_title(title),
                     {"type": "separator", "margin": "sm"},
                     *rows,
                 ],
