@@ -17,7 +17,7 @@ from linebot.v3.messaging import (
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 
 from agents.orchestrator import Orchestrator
-from linebot_utils.flex_card import build_etf_flex_card, build_dual_etf_carousel
+from linebot_utils.flex_card import build_etf_flex_card, build_etf_carousel
 from config import ETF_CONFIG
 
 logger = logging.getLogger(__name__)
@@ -26,15 +26,19 @@ logger = logging.getLogger(__name__)
 _KEYWORD_MAP: dict[str, list[str]] = {
     "0050":   ["0050", "台灣50", "台50"],
     "00631L": ["00631l", "00631L", "正2", "槓桿", "leveraged"],
-    "both":   ["both", "全部", "兩個", "比較", "分析", "all"],
+    "009816": ["009816", "凱基", "top50", "TOP50"],
+    "00981A": ["00981a", "00981A", "統一成長", "主動", "成長"],
+    "all":    ["all", "全部", "比較", "分析", "both", "所有"],
 }
 
 HELP_TEXT = (
     "📋 ETF AI 分析機器人\n\n"
     "🔍 支援指令：\n"
-    "  • 傳送 「0050」 → 元大台灣50 分析\n"
-    "  • 傳送 「00631L」 → 元大台灣50正2 分析\n"
-    "  • 傳送 「分析」 → 同時顯示兩支 ETF\n\n"
+    "  • 「0050」 → 元大台灣50\n"
+    "  • 「00631L」 → 元大台灣50正2（槓桿）\n"
+    "  • 「009816」 → 凱基台灣TOP50\n"
+    "  • 「00981A」 → 統一台灣成長主動\n"
+    "  • 「分析」 → 全部 4 支 ETF 比較\n\n"
     "⚠️ 本資訊僅供參考，不構成投資建議。"
 )
 
@@ -68,8 +72,8 @@ def handle_message_event(event: MessageEvent) -> None:
         return
 
     try:
-        if target == "both":
-            _reply_dual(api, reply_token)
+        if target == "all":
+            _reply_all(api, reply_token)
         else:
             _reply_single(api, reply_token, target)
     except Exception as exc:
@@ -97,10 +101,12 @@ def _reply_single(api: MessagingApi, reply_token: str, symbol: str) -> None:
     )
 
 
-def _reply_dual(api: MessagingApi, reply_token: str) -> None:
-    analysis_0050   = Orchestrator("0050").run()
-    analysis_00631L = Orchestrator("00631L").run()
-    carousel = build_dual_etf_carousel(analysis_0050, analysis_00631L)
+def _reply_all(api: MessagingApi, reply_token: str) -> None:
+    from concurrent.futures import ThreadPoolExecutor
+    symbols = list(ETF_CONFIG.keys())
+    with ThreadPoolExecutor(max_workers=len(symbols)) as ex:
+        analyses = list(ex.map(lambda s: Orchestrator(s).run(), symbols))
+    carousel = build_etf_carousel(*analyses)
 
     api.reply_message(
         ReplyMessageRequest(

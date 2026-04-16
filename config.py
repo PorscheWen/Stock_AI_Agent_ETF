@@ -25,6 +25,28 @@ ETF_CONFIG = {
         "header_color": "#6A1B9A",
         "yahoo_symbol": "00631L.TW",
     },
+    "009816": {
+        "name": "凱基台灣TOP50",
+        "full_name": "凱基台灣TOP50 ETF",
+        "description": "追蹤台灣市值前50大上市公司",
+        "type": "standard",
+        "leverage": 1,
+        "risk_level": "中",
+        "risk_color": "#F39C12",
+        "header_color": "#00695C",
+        "yahoo_symbol": "009816.TW",
+    },
+    "00981A": {
+        "name": "統一台灣成長",
+        "full_name": "統一台灣成長主動 ETF",
+        "description": "主動式選股，聚焦台灣成長型企業",
+        "type": "active",
+        "leverage": 1,
+        "risk_level": "中高",
+        "risk_color": "#E65100",
+        "header_color": "#4527A0",
+        "yahoo_symbol": "00981A.TW",
+    },
 }
 
 # 技術指標參數

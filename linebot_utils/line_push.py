@@ -18,8 +18,11 @@ from linebot.v3.messaging import (
     TextMessage,
 )
 
+from concurrent.futures import ThreadPoolExecutor
+
 from agents.orchestrator import Orchestrator
-from linebot_utils.flex_card import build_dual_etf_carousel, build_etf_flex_card
+from config import ETF_CONFIG
+from linebot_utils.flex_card import build_etf_carousel, build_etf_flex_card
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -62,11 +65,14 @@ def push_single(symbol: str) -> None:
 
 
 def push_dual() -> None:
-    """同時分析 0050 + 00631L，以 Carousel 推播。"""
-    logger.info("[Push] 分析 0050 + 00631L ...")
-    analysis_0050   = Orchestrator("0050").run()
-    analysis_00631L = Orchestrator("00631L").run()
-    carousel = build_dual_etf_carousel(analysis_0050, analysis_00631L)
+    """同時分析全部 ETF，以 Carousel 推播。"""
+    symbols = list(ETF_CONFIG.keys())
+    logger.info("[Push] 分析 %s ...", " + ".join(symbols))
+
+    with ThreadPoolExecutor(max_workers=len(symbols)) as ex:
+        analyses = list(ex.map(lambda s: Orchestrator(s).run(), symbols))
+
+    carousel = build_etf_carousel(*analyses)
 
     api = _get_api()
     api.push_message(
@@ -80,7 +86,7 @@ def push_dual() -> None:
             ],
         )
     )
-    logger.info("[Push] 雙 ETF Carousel 推播成功")
+    logger.info("[Push] %d 支 ETF Carousel 推播成功", len(symbols))
 
 
 def push_text(message: str) -> None:

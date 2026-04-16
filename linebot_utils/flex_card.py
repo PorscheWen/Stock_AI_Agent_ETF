@@ -402,21 +402,23 @@ def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
     }
 
 
-def build_dual_etf_carousel(analysis_0050: dict, analysis_00631L: dict) -> dict:
-    """
-    將兩支 ETF 的卡片組合為 Carousel（左右滑動）。
-    """
-    card_0050   = build_etf_flex_card(analysis_0050)["contents"]
-    card_00631L = build_etf_flex_card(analysis_00631L)["contents"]
-
+def build_etf_carousel(*analyses: dict) -> dict:
+    """將任意數量 ETF 分析結果組合為 Carousel（左右滑動，最多 12 支）。"""
+    bubbles = [build_etf_flex_card(a)["contents"] for a in analyses]
+    names = "、".join(a["symbol"] for a in analyses)
     return {
         "type": "flex",
-        "altText": "ETF AI 多空分析（0050 & 00631L）",
+        "altText": f"ETF AI 多空分析（{names}）",
         "contents": {
             "type": "carousel",
-            "contents": [card_0050, card_00631L],
+            "contents": bubbles,
         },
     }
+
+
+def build_dual_etf_carousel(analysis_0050: dict, analysis_00631L: dict) -> dict:
+    """向下相容：保留舊介面，內部呼叫 build_etf_carousel。"""
+    return build_etf_carousel(analysis_0050, analysis_00631L)
 
 
 # ── 工具函式 ──────────────────────────────────────────────────────────────────
