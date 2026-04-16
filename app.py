@@ -28,7 +28,18 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-_parser = WebhookParser(os.environ["LINE_CHANNEL_SECRET"])
+# Lazy 初始化：避免 Render 環境變數未設定時 module 載入就崩潰
+_parser: WebhookParser | None = None
+
+
+def _get_parser() -> WebhookParser:
+    global _parser
+    if _parser is None:
+        secret = os.environ.get("LINE_CHANNEL_SECRET", "")
+        if not secret:
+            raise RuntimeError("LINE_CHANNEL_SECRET 環境變數未設定")
+        _parser = WebhookParser(secret)
+    return _parser
 
 
 # ── 路由 ───────────────────────────────────────────────────────────────────────
@@ -50,7 +61,7 @@ def webhook():
 
     # 先驗章，無效直接 400
     try:
-        events = _parser.parse(body, signature)
+        events = _get_parser().parse(body, signature)
     except InvalidSignatureError:
         logger.warning("Invalid signature received")
         abort(400)
@@ -72,6 +83,13 @@ def _safe_handle(event: MessageEvent) -> None:
         handle_message_event(event)
     except Exception as exc:
         logger.exception("處理事件時發生錯誤：%s", exc)
+
+
+# ── 本機開發 ──────────────────────────────────────────────────────────────────
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
 
 
 # ── 本機開發 ───────────────────────────────────────────────────────────────────
