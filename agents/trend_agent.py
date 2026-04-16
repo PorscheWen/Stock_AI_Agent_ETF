@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from typing import Any
 
+import numpy as np
 import pandas as pd
 
 from agents.base_agent import BaseAgent
@@ -67,8 +68,7 @@ class TrendAgent(BaseAgent):
         # --- 趨勢斜率（線性回歸近20日）---
         if len(close) >= 20:
             y = close.iloc[-20:].values
-            x = range(len(y))
-            slope = pd.Series(y).diff().mean()  # 簡化斜率
+            slope = float(np.polyfit(range(len(y)), y, 1)[0])
             if slope > 0:
                 signals.append({"label": "20日趨勢", "value": "上升趨勢 ✅", "bullish": True})
                 score += 1

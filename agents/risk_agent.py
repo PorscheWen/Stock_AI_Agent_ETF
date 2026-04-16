@@ -77,14 +77,21 @@ class RiskAgent(BaseAgent):
             })
             score -= 1
 
-            # 高波動環境下槓桿 ETF 加倍警示
             if atr_pct > 2.5:
+                # 高波動下槓桿耗損加速，不建議持有
                 signals.append({
                     "label": "⚠️ 震盪耗損",
-                    "value": "高波動市況槓桿耗損加速",
+                    "value": "高波動市況槓桿耗損加速，不建議持有過夜",
                     "bullish": False,
                 })
                 score -= 1
+            else:
+                # 低波動趨勢市場，槓桿 ETF 適合短線動能交易
+                signals.append({
+                    "label": "💡 適用情境",
+                    "value": "低波動趨勢市場，適合短線動能交易",
+                    "bullish": None,
+                })
 
         action = self._score_to_action(score)
 

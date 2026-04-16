@@ -13,7 +13,7 @@ import pandas as pd
 import yfinance as yf
 
 
-def fetch_etf_data(symbol: str, period: str = "6mo") -> pd.DataFrame:
+def fetch_etf_data(symbol: str, period: str = "1y") -> pd.DataFrame:
     """
     從 Yahoo Finance 取得 ETF OHLCV 資料。
     Taiwan 股票使用 .TW 後綴（若尚未加入）。

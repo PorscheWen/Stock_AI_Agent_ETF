@@ -43,9 +43,9 @@ class VolumeAgent(BaseAgent):
         else:
             signals.append({"label": "量能", "value": f"{vol_ratio:.1f}x 均量 正常", "bullish": None})
 
-        # 量價配合: 價漲量增 / 價跌量縮 為多頭
+        # 量價配合: 價漲量增（需放量 1.2x 以上才算確認）/ 價跌量縮 為多頭
         price_change = df["Close"].pct_change().iloc[-1]
-        if price_change > 0 and vol_ratio >= 1.0:
+        if price_change > 0 and vol_ratio >= 1.2:
             signals.append({"label": "量價", "value": "價漲量增 多頭確認 ✅", "bullish": True})
             score += 2
         elif price_change < 0 and vol_ratio >= 1.5:

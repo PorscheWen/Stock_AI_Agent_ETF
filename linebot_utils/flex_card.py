@@ -37,8 +37,11 @@ def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
     final_action = analysis["final_action"]
     total_score  = analysis["total_score"]
     confidence   = analysis["confidence"]
-    agent_results = analysis["agent_results"]
-    generated_at  = analysis["generated_at"]
+    stop_loss      = analysis.get("stop_loss")
+    take_profit    = analysis.get("take_profit")
+    recommendation = analysis.get("recommendation", {})
+    agent_results  = analysis["agent_results"]
+    generated_at   = analysis["generated_at"]
 
     action_meta   = ACTION_LABELS.get(final_action, {"emoji": "➖", "color": "#546E7A"})
     header_color  = _ACTION_HEADER_COLOR.get(final_action, "#37474F")
@@ -243,27 +246,116 @@ def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
         ],
     }
 
+    # ── 停損/停利區塊 ──────────────────────────────────────────────────────────
+    price_target_contents = []
+    if stop_loss and take_profit:
+        price_target_contents = [
+            {"type": "separator", "margin": "lg"},
+            {
+                "type": "box",
+                "layout": "horizontal",
+                "margin": "md",
+                "contents": [
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "flex": 1,
+                        "contents": [
+                            {"type": "text", "text": "建議停損", "size": "xs", "color": "#888888"},
+                            {"type": "text", "text": f"NT$ {stop_loss:.2f}", "size": "sm",
+                             "weight": "bold", "color": "#C62828"},
+                        ],
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "flex": 1,
+                        "contents": [
+                            {"type": "text", "text": "建議停利", "size": "xs", "color": "#888888", "align": "end"},
+                            {"type": "text", "text": f"NT$ {take_profit:.2f}", "size": "sm",
+                             "weight": "bold", "color": "#2E7D32", "align": "end"},
+                        ],
+                    },
+                ],
+            },
+        ]
+
+    # ── 操作建議區塊 ─────────────────────────────────────────────────────────
+    rec_rows = []
+    if recommendation:
+        _rec_items = [
+            ("📌 分析", recommendation.get("summary", "")),
+            ("🚪 進場", recommendation.get("entry", "")),
+            ("🎯 出場", recommendation.get("exit", "")),
+            ("💼 倉位", recommendation.get("position", "")),
+        ]
+        for label, value in _rec_items:
+            if value:
+                rec_rows.append({
+                    "type": "box",
+                    "layout": "vertical",
+                    "paddingTop": "5px",
+                    "paddingBottom": "5px",
+                    "contents": [
+                        {"type": "text", "text": label, "size": "xs",
+                         "color": "#777777", "weight": "bold"},
+                        {"type": "text", "text": value, "size": "xs",
+                         "color": "#333333", "wrap": True},
+                    ],
+                })
+        # 特殊備注（槓桿 ETF）
+        note = recommendation.get("note", "")
+        if note:
+            rec_rows.append({
+                "type": "text",
+                "text": note,
+                "size": "xs",
+                "color": "#C62828",
+                "wrap": True,
+                "margin": "sm",
+                "weight": "bold",
+            })
+
+    rec_section = {
+        "type": "box",
+        "layout": "vertical",
+        "margin": "lg",
+        "backgroundColor": "#E8F5E9",
+        "paddingAll": "10px",
+        "cornerRadius": "8px",
+        "contents": [
+            _section_title("📋 操作建議"),
+            {"type": "separator", "margin": "sm"},
+            *rec_rows,
+        ],
+    } if rec_rows else None
+
     # ── Body ─────────────────────────────────────────────────────────────────
+    body_contents = [
+        price_box,
+        *price_target_contents,
+        {"type": "separator", "margin": "lg"},
+        {
+            "type": "box",
+            "layout": "vertical",
+            "margin": "lg",
+            "contents": [
+                {"type": "text", "text": score_label, "size": "xs", "color": "#555555"},
+                score_bar,
+            ],
+        },
+        agent_section,
+        *signal_sections,
+        risk_section,
+    ]
+    if rec_section:
+        body_contents.append(rec_section)
+
     body = {
         "type": "box",
         "layout": "vertical",
         "paddingAll": "16px",
-        "contents": [
-            price_box,
-            {"type": "separator", "margin": "lg"},
-            {
-                "type": "box",
-                "layout": "vertical",
-                "margin": "lg",
-                "contents": [
-                    {"type": "text", "text": score_label, "size": "xs", "color": "#555555"},
-                    score_bar,
-                ],
-            },
-            agent_section,
-            *signal_sections,
-            risk_section,
-        ],
+        "contents": body_contents,
     }
 
     # ── Footer ────────────────────────────────────────────────────────────────
@@ -341,11 +433,11 @@ def _section_title(text: str) -> dict:
 
 def _build_score_bar(score: float) -> dict:
     """
-    用一列方塊視覺化總分（-8 ~ +8 映射到 0~100%）。
+    用一列方塊視覺化總分（-3.5 ~ +3.5 映射到 0~100%）。
     正分綠色，負分紅色。
     """
-    clamped = max(-8.0, min(8.0, score))
-    pct = int((clamped + 8) / 16 * 100)
+    clamped = max(-3.5, min(3.5, score))
+    pct = int((clamped + 3.5) / 7.0 * 100)
     color = "#2E7D32" if score >= 0 else "#C62828"
 
     return {

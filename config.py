@@ -42,13 +42,19 @@ INDICATOR_PARAMS = {
     "volume_ma": 20,
 }
 
-# 決策閾值
+# 決策閾值（對應正規化後加權總分，範圍約 -3.5 ~ +3.5）
 DECISION_THRESHOLDS = {
-    "strong_buy": 4,
-    "buy": 2,
-    "sell": -2,
-    "strong_sell": -4,
+    "strong_buy": 2.5,
+    "buy": 1.2,
+    "sell": -1.2,
+    "strong_sell": -2.5,
 }
+
+# 各 Agent 正規化基準（理論最大正分）
+AGENT_MAX_SCORES = [7.0, 5.0, 7.0, 3.0]  # tech, vol, trend, risk
+
+# 加權正規化後的最大總分（用於信心度計算）
+MAX_WEIGHTED_SCORE = 3.5
 
 ACTION_LABELS = {
     "強力買入": {"emoji": "🚀", "color": "#00897B"},

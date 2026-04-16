@@ -4,7 +4,7 @@
   python main.py              # 立即推播雙 ETF（0050 + 00631L）
   python main.py --etf 0050   # 只推播 0050
   python main.py --etf 00631L # 只推播 00631L
-  python main.py --schedule   # 啟動每日 08:30 排程，自動雙 ETF 推播
+  python main.py --schedule   # 啟動排程，台灣時間 08:00 週一～週五自動推播
 """
 from __future__ import annotations
 
@@ -12,6 +12,9 @@ import argparse
 import io
 import logging
 import sys
+
+import pytz
+from apscheduler.schedulers.blocking import BlockingScheduler
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
@@ -21,8 +24,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+TZ_TAIPEI = pytz.timezone("Asia/Taipei")
 
-def _run_push(etf: str | None) -> None:
+
+def _run_push(etf: str | None = None) -> None:
     from linebot_utils.line_push import push_dual, push_single, push_text
     try:
         if etf:
@@ -42,21 +47,34 @@ def main() -> None:
     parser.add_argument("--etf", choices=["0050", "00631L"],
                         help="指定單支 ETF；不填則推播兩支")
     parser.add_argument("--schedule", action="store_true",
-                        help="啟動每日 08:30 排程")
+                        help="啟動排程（台灣時間週一~週五 08:00 自動推播）")
     args = parser.parse_args()
 
     if args.schedule:
-        import schedule
-        import time
+        scheduler = BlockingScheduler(timezone=TZ_TAIPEI)
 
-        logger.info("⏰ 排程模式啟動，每日 08:30 自動推播")
-        # 啟動時先執行一次
+        # 週一～週五台灣時間 08:00 推播
+        scheduler.add_job(
+            _run_push,
+            trigger="cron",
+            day_of_week="mon-fri",
+            hour=8,
+            minute=0,
+            kwargs={"etf": args.etf},
+            id="etf_morning_push",
+            name="ETF 早盤前分析推播",
+            misfire_grace_time=300,  # 最多容忍遲發 5 分鐘
+        )
+
+        logger.info("⏰ 排程模式啟動 — 台灣時間週一至週五 08:00 自動推播")
+
+        # 啟動時立即推播一次
         _run_push(args.etf)
 
-        schedule.every().day.at("08:30").do(_run_push, etf=args.etf)
-        while True:
-            schedule.run_pending()
-            time.sleep(30)
+        try:
+            scheduler.start()
+        except (KeyboardInterrupt, SystemExit):
+            logger.info("排程已停止")
     else:
         _run_push(args.etf)
 
