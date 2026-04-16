@@ -14,7 +14,7 @@ from agents.volume_agent import VolumeAgent
 from agents.trend_agent import TrendAgent
 from agents.risk_agent import RiskAgent
 from config import AGENT_MAX_SCORES, DECISION_THRESHOLDS, ETF_CONFIG, MAX_WEIGHTED_SCORE
-from data import fetch_etf_data
+from data import fetch_etf_data, get_current_price
 
 
 class Orchestrator:
@@ -70,11 +70,15 @@ class Orchestrator:
         # 信心度：正規化總分佔最大加權總分的比例
         confidence = round(min(abs(total_score) / MAX_WEIGHTED_SCORE * 100, 100))
 
-        latest_price = float(df["Close"].iloc[-1])
+        # 即時市價（用於顯示與停損停利計算）
+        latest_price = get_current_price(self.symbol)
+        if not latest_price:
+            latest_price = float(df["Close"].iloc[-1])
+
         latest_date = df.index[-1]
         latest_date_str = latest_date.strftime("%Y/%m/%d") if hasattr(latest_date, "strftime") else str(latest_date)
 
-        # ATR 停損/停利建議（1.5 ATR 止損，2 ATR 停利）
+        # ATR 停損/停利建議（1.5 ATR 止損，2 ATR 停利），基於即時市價
         risk_details = next(
             (r["details"] for r in agent_results if "atr_pct" in r.get("details", {})),
             {},
