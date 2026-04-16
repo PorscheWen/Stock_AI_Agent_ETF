@@ -26,6 +26,8 @@ def fetch_etf_data(symbol: str, period: str = "1y") -> pd.DataFrame:
         # 攤平多層欄位（yfinance 有時會回傳 MultiIndex）
         if isinstance(df.columns, pd.MultiIndex):
             df.columns = df.columns.get_level_values(0)
+        # 移除重複欄位（MultiIndex 展平後可能出現）
+        df = df.loc[:, ~df.columns.duplicated()]
         df.dropna(subset=["Close", "Volume"], inplace=True)
         return df
     except Exception as exc:
