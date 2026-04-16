@@ -71,9 +71,9 @@ class Orchestrator:
         confidence = round(min(abs(total_score) / MAX_WEIGHTED_SCORE * 100, 100))
 
         # 即時市價（用於顯示與停損停利計算）
-        latest_price = get_current_price(self.symbol)
+        latest_price = round(get_current_price(self.symbol), 2)
         if not latest_price:
-            latest_price = float(df["Close"].iloc[-1])
+            latest_price = round(float(df["Close"].iloc[-1]), 2)
 
         latest_date = df.index[-1]
         latest_date_str = latest_date.strftime("%Y/%m/%d") if hasattr(latest_date, "strftime") else str(latest_date)
