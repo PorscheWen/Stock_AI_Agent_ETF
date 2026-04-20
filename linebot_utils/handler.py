@@ -14,15 +14,20 @@ from linebot.v3.messaging import (
     FlexMessage,
     TextMessage,
 )
-from linebot.v3.webhooks import MessageEvent, TextMessageContent
+from linebot.v3.webhooks import (
+    FollowEvent,
+    MessageEvent,
+    TextMessageContent,
+    UnfollowEvent,
+)
 
 from agents.orchestrator import Orchestrator
+from data.db import add_subscriber, remove_subscriber
 from linebot_utils.flex_card import build_etf_flex_card, build_etf_carousel
 from config import ETF_CONFIG
 
 logger = logging.getLogger(__name__)
 
-# ETF 關鍵字對應對照表
 _KEYWORD_MAP: dict[str, list[str]] = {
     "0050":   ["0050", "台灣50", "台50"],
     "00631L": ["00631l", "00631L", "正2", "槓桿", "leveraged"],
@@ -39,8 +44,19 @@ HELP_TEXT = (
     "  • 「009816」 → 凱基台灣TOP50\n"
     "  • 「00981A」 → 統一台灣成長主動\n"
     "  • 「分析」 → 全部 4 支 ETF 比較\n\n"
+    "📩 盤前推播：\n"
+    "  • 「訂閱」 → 加入每日早盤推播\n"
+    "  • 「取消訂閱」 → 停止推播\n\n"
     "⚠️ 本資訊僅供參考，不構成投資建議。"
 )
+
+SUBSCRIBE_TEXT = (
+    "✅ 訂閱成功！\n"
+    "每個交易日早上 8:00 將自動推播 ETF AI 分析報告。\n\n"
+    "輸入「取消訂閱」可隨時退訂。"
+)
+
+UNSUBSCRIBE_TEXT = "🔕 已取消訂閱，不再接收每日推播。"
 
 
 def _messaging_api() -> MessagingApi:
@@ -49,7 +65,6 @@ def _messaging_api() -> MessagingApi:
 
 
 def _parse_target(text: str) -> str | None:
-    """根據使用者輸入判斷要分析哪支（哪些）ETF"""
     lower = text.strip().lower()
     for key, keywords in _KEYWORD_MAP.items():
         if any(kw.lower() in lower for kw in keywords):
@@ -57,15 +72,50 @@ def _parse_target(text: str) -> str | None:
     return None
 
 
+# ── 公開進入點（by app.py 分派） ────────────────────────────────────────────────
+
+def handle_follow_event(event: FollowEvent) -> None:
+    """加好友時自動訂閱並歡迎。"""
+    user_id = event.source.user_id
+    add_subscriber(user_id)
+    logger.info("[Subscribe] follow — %s", user_id)
+
+    api = _messaging_api()
+    _reply_text(api, event.reply_token,
+                "👋 歡迎加入 ETF AI 分析機器人！\n\n" + SUBSCRIBE_TEXT)
+
+
+def handle_unfollow_event(event: UnfollowEvent) -> None:
+    """封鎖/刪除好友時自動退訂。"""
+    user_id = event.source.user_id
+    remove_subscriber(user_id)
+    logger.info("[Unsubscribe] unfollow — %s", user_id)
+
+
 def handle_message_event(event: MessageEvent) -> None:
-    """處理使用者傳入的文字訊息，回傳對應 Flex 卡片。"""
+    """處理文字訊息。"""
     if not isinstance(event.message, TextMessageContent):
         return
 
-    text = event.message.text
+    text = event.message.text.strip()
     reply_token = event.reply_token
+    user_id = event.source.user_id
     api = _messaging_api()
 
+    # 訂閱 / 取消訂閱
+    if text in ("訂閱", "subscribe"):
+        add_subscriber(user_id)
+        logger.info("[Subscribe] message — %s", user_id)
+        _reply_text(api, reply_token, SUBSCRIBE_TEXT)
+        return
+
+    if text in ("取消訂閱", "退訂", "unsubscribe"):
+        remove_subscriber(user_id)
+        logger.info("[Unsubscribe] message — %s", user_id)
+        _reply_text(api, reply_token, UNSUBSCRIBE_TEXT)
+        return
+
+    # ETF 分析
     target = _parse_target(text)
     if target is None:
         _reply_text(api, reply_token, HELP_TEXT)
@@ -84,21 +134,15 @@ def handle_message_event(event: MessageEvent) -> None:
 # ── 內部回覆函式 ──────────────────────────────────────────────────────────────
 
 def _reply_single(api: MessagingApi, reply_token: str, symbol: str) -> None:
-    orchestrator = Orchestrator(symbol)
-    analysis = orchestrator.run()
+    analysis = Orchestrator(symbol).run()
     flex_payload = build_etf_flex_card(analysis)
-
-    api.reply_message(
-        ReplyMessageRequest(
-            reply_token=reply_token,
-            messages=[
-                FlexMessage(
-                    alt_text=flex_payload["altText"],
-                    contents=flex_payload["contents"],
-                )
-            ],
-        )
-    )
+    api.reply_message(ReplyMessageRequest(
+        reply_token=reply_token,
+        messages=[FlexMessage(
+            alt_text=flex_payload["altText"],
+            contents=flex_payload["contents"],
+        )],
+    ))
 
 
 def _reply_all(api: MessagingApi, reply_token: str) -> None:
@@ -107,24 +151,17 @@ def _reply_all(api: MessagingApi, reply_token: str) -> None:
     with ThreadPoolExecutor(max_workers=len(symbols)) as ex:
         analyses = list(ex.map(lambda s: Orchestrator(s).run(), symbols))
     carousel = build_etf_carousel(*analyses)
-
-    api.reply_message(
-        ReplyMessageRequest(
-            reply_token=reply_token,
-            messages=[
-                FlexMessage(
-                    alt_text=carousel["altText"],
-                    contents=carousel["contents"],
-                )
-            ],
-        )
-    )
+    api.reply_message(ReplyMessageRequest(
+        reply_token=reply_token,
+        messages=[FlexMessage(
+            alt_text=carousel["altText"],
+            contents=carousel["contents"],
+        )],
+    ))
 
 
 def _reply_text(api: MessagingApi, reply_token: str, text: str) -> None:
-    api.reply_message(
-        ReplyMessageRequest(
-            reply_token=reply_token,
-            messages=[TextMessage(text=text)],
-        )
-    )
+    api.reply_message(ReplyMessageRequest(
+        reply_token=reply_token,
+        messages=[TextMessage(text=text)],
+    ))

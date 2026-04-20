@@ -1,4 +1,5 @@
 services:
+  # Web service：處理 LINE webhook，儲存訂閱者至 SQLite
   - type: web
     name: Stock_AI_Agent_ETF
     runtime: python
@@ -13,5 +14,32 @@ services:
         sync: false
       - key: LINE_CHANNEL_ACCESS_TOKEN
         sync: false
+      - key: PUSH_SECRET
+        sync: false
       - key: ANTHROPIC_API_KEY
+        sync: false
+
+  # Cron job：每個交易日台灣時間 08:00 呼叫 /push 觸發推播
+  - type: cron
+    name: ETF_Morning_Push
+    runtime: python
+    region: singapore
+    plan: free
+    branch: main
+    schedule: "0 0 * * 1-5"
+    buildCommand: pip install requests
+    startCommand: >
+      python -c "
+      import os, requests, sys;
+      url = os.environ['WEB_SERVICE_URL'].rstrip('/') + '/push';
+      secret = os.environ.get('PUSH_SECRET','');
+      headers = {'Authorization': f'Bearer {secret}'} if secret else {};
+      r = requests.post(url, headers=headers, timeout=30);
+      print('status:', r.status_code, r.text);
+      sys.exit(0 if r.status_code in (200,202) else 1)
+      "
+    envVars:
+      - key: WEB_SERVICE_URL
+        value: https://stock-ai-agent-etf.onrender.com
+      - key: PUSH_SECRET
         sync: false

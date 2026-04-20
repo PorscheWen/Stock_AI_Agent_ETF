@@ -44,8 +44,9 @@ def _run_push(etf: str | None = None) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="ETF AI Agent — LINE Push 模式")
-    parser.add_argument("--etf", choices=["0050", "00631L"],
-                        help="指定單支 ETF；不填則推播兩支")
+    from config import ETF_CONFIG
+    parser.add_argument("--etf", choices=list(ETF_CONFIG.keys()),
+                        help="指定單支 ETF；不填則推播全部")
     parser.add_argument("--schedule", action="store_true",
                         help="啟動排程（台灣時間週一~週五 08:00 自動推播）")
     args = parser.parse_args()
