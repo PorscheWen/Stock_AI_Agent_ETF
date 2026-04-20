@@ -76,10 +76,22 @@ def _send(api: MessagingApi, user_ids: list[str], messages: list) -> None:
             api.multicast(MulticastRequest(to=user_ids[i:i + 500], messages=messages))
 
 
+def _run_and_cache(symbol: str) -> dict:
+    """執行分析並存入快取，回傳 analysis dict。"""
+    analysis = Orchestrator(symbol).run()
+    try:
+        from data.db import save_analysis
+        save_analysis(symbol, analysis)
+        logger.info("[Cache] %s 分析結果已存入 DB", symbol)
+    except Exception as exc:
+        logger.warning("[Cache] 無法儲存 %s 快取：%s", symbol, exc)
+    return analysis
+
+
 def push_single(symbol: str) -> None:
     """分析單支 ETF 並推播給所有訂閱者。"""
     logger.info("[Push] 分析 %s ...", symbol)
-    analysis = Orchestrator(symbol).run()
+    analysis = _run_and_cache(symbol)
     payload = build_etf_flex_card(analysis)
 
     user_ids = _get_user_ids()
@@ -99,7 +111,7 @@ def push_dual() -> None:
     logger.info("[Push] 分析 %s ...", " + ".join(symbols))
 
     with ThreadPoolExecutor(max_workers=len(symbols)) as ex:
-        analyses = list(ex.map(lambda s: Orchestrator(s).run(), symbols))
+        analyses = list(ex.map(_run_and_cache, symbols))
 
     carousel = build_etf_carousel(*analyses)
 
