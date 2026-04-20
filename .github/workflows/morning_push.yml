@@ -1,0 +1,27 @@
+name: ETF 早盤推播
+
+on:
+  schedule:
+    - cron: "0 0 * * 1-5"  # UTC 00:00 = 台灣時間 08:00，週一至週五
+  workflow_dispatch:         # 允許手動觸發測試
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 安裝依賴
+        run: pip install -r requirements.txt
+
+      - name: 執行 ETF 推播
+        run: python main.py
+        env:
+          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+          LINE_CHANNEL_SECRET: ${{ secrets.LINE_CHANNEL_SECRET }}
+          LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
