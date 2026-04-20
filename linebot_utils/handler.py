@@ -110,6 +110,11 @@ def handle_message_event(event: MessageEvent) -> None:
     user_id = event.source.user_id
     api = _messaging_api()
 
+    # 操作說明
+    if text in ("說明", "help", "HELP", "menu", "選單"):
+        _reply_text(api, reply_token, HELP_TEXT)
+        return
+
     # 訂閱 / 取消訂閱
     if text in ("訂閱", "subscribe"):
         add_subscriber(user_id)

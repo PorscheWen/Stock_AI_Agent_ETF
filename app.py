@@ -84,6 +84,40 @@ def webhook():
     return "OK", 200
 
 
+@app.post("/setup_rich_menu")
+def setup_rich_menu_endpoint():
+    """一次性設定 Rich Menu（需帶 Authorization: Bearer <PUSH_SECRET>）。"""
+    secret = os.environ.get("PUSH_SECRET", "")
+    if secret:
+        auth = request.headers.get("Authorization", "")
+        if auth != f"Bearer {secret}":
+            abort(401)
+    try:
+        from linebot_utils.rich_menu import setup_rich_menu
+        rich_menu_id = setup_rich_menu()
+        return jsonify({"status": "ok", "rich_menu_id": rich_menu_id}), 200
+    except Exception as exc:
+        logger.exception("Rich Menu 設定失敗：%s", exc)
+        return jsonify({"status": "error", "message": str(exc)}), 500
+
+
+@app.post("/reset_rich_menu")
+def reset_rich_menu_endpoint():
+    """刪除所有 Rich Menu（需帶 Authorization: Bearer <PUSH_SECRET>）。"""
+    secret = os.environ.get("PUSH_SECRET", "")
+    if secret:
+        auth = request.headers.get("Authorization", "")
+        if auth != f"Bearer {secret}":
+            abort(401)
+    try:
+        from linebot_utils.rich_menu import delete_all_rich_menus
+        count = delete_all_rich_menus()
+        return jsonify({"status": "ok", "deleted": count}), 200
+    except Exception as exc:
+        logger.exception("Rich Menu 刪除失敗：%s", exc)
+        return jsonify({"status": "error", "message": str(exc)}), 500
+
+
 @app.post("/push")
 def push_trigger():
     """
