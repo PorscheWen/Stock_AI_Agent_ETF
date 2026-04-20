@@ -15,3 +15,19 @@ services:
         sync: false
       - key: ANTHROPIC_API_KEY
         sync: false
+
+  - type: cron
+    name: Stock_AI_Agent_ETF_MorningPush
+    runtime: python
+    region: singapore
+    branch: main
+    schedule: "0 0 * * 1-5"
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: LINE_CHANNEL_SECRET
+        sync: false
+      - key: LINE_CHANNEL_ACCESS_TOKEN
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
