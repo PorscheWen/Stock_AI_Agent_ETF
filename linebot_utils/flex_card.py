@@ -1,6 +1,6 @@
 """
-Flex Message 卡片產生器
-兩支 ETF（0050 / 00631L）使用相同的卡片模板。
+Flex Message 卡片產生器 — 左右橫排圖卡版
+bubble size: mega，Agent 判斷 2×2 格、訊號左右雙欄排列。
 """
 from __future__ import annotations
 
@@ -19,347 +19,355 @@ _ACTION_HEADER_COLOR = {
 }
 
 _SIGNAL_COLORS = {
-    True:  "#2E7D32",   # 看多 — 綠
-    False: "#C62828",   # 看空 — 紅
-    None:  "#546E7A",   # 中性 — 灰藍
+    True:  "#2E7D32",
+    False: "#C62828",
+    None:  "#546E7A",
 }
 
 
 def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
-    """
-    依照 Orchestrator 回傳的 analysis dict，
-    產生 LINE Flex Message Bubble 物件（Python dict）。
-    """
-    symbol       = analysis["symbol"]
-    etf_info     = analysis["etf_info"]
-    price        = analysis["latest_price"]
-    date_str     = analysis["latest_date"]
-    final_action = analysis["final_action"]
-    total_score  = analysis["total_score"]
-    confidence   = analysis["confidence"]
-    stop_loss      = analysis.get("stop_loss")
-    take_profit    = analysis.get("take_profit")
+    symbol        = analysis["symbol"]
+    etf_info      = analysis["etf_info"]
+    price         = analysis["latest_price"]
+    date_str      = analysis["latest_date"]
+    final_action  = analysis["final_action"]
+    total_score   = analysis["total_score"]
+    confidence    = analysis["confidence"]
+    stop_loss     = analysis.get("stop_loss")
+    take_profit   = analysis.get("take_profit")
     recommendation = analysis.get("recommendation", {})
-    agent_results  = analysis["agent_results"]
-    generated_at   = analysis["generated_at"]
+    agent_results = analysis["agent_results"]
+    generated_at  = analysis["generated_at"]
 
-    action_meta   = ACTION_LABELS.get(final_action, {"emoji": "➖", "color": "#546E7A"})
-    header_color  = _ACTION_HEADER_COLOR.get(final_action, "#37474F")
+    action_meta  = ACTION_LABELS.get(final_action, {"emoji": "➖", "color": "#546E7A"})
+    header_color = _ACTION_HEADER_COLOR.get(final_action, "#37474F")
 
     # ── Header ───────────────────────────────────────────────────────────────
     header = {
         "type": "box",
-        "layout": "vertical",
+        "layout": "horizontal",
         "backgroundColor": header_color,
-        "paddingAll": "16px",
+        "paddingAll": "14px",
         "contents": [
             {
                 "type": "box",
-                "layout": "horizontal",
+                "layout": "vertical",
+                "flex": 5,
                 "contents": [
                     {
                         "type": "box",
-                        "layout": "vertical",
-                        "flex": 4,
+                        "layout": "horizontal",
                         "contents": [
                             {
                                 "type": "text",
-                                "text": etf_info['name'],
+                                "text": etf_info["name"],
                                 "color": "#FFFFFF",
-                                "size": "lg",
+                                "size": "md",
                                 "weight": "bold",
+                                "flex": 0,
                             },
                             {
                                 "type": "text",
-                                "text": f"({symbol})",
-                                "color": "#FFFFFFcc",
+                                "text": f"  {symbol}",
+                                "color": "#FFFFFFaa",
                                 "size": "sm",
+                                "flex": 0,
                             },
                         ],
                     },
                     {
                         "type": "text",
-                        "text": etf_info.get("risk_level", "-") + " 風險",
-                        "color": "#FFFFFFcc",
-                        "size": "sm",
-                        "align": "end",
-                        "flex": 2,
+                        "text": etf_info["description"],
+                        "color": "#FFFFFFaa",
+                        "size": "xxs",
+                        "margin": "xs",
+                        "wrap": True,
                     },
                 ],
             },
             {
-                "type": "text",
-                "text": etf_info["description"],
-                "color": "#FFFFFFaa",
-                "size": "xs",
-                "margin": "sm",
+                "type": "box",
+                "layout": "vertical",
+                "flex": 3,
+                "alignItems": "flex-end",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": f"{action_meta['emoji']} {final_action}",
+                        "color": "#FFFFFF",
+                        "size": "sm",
+                        "weight": "bold",
+                        "align": "end",
+                    },
+                    {
+                        "type": "text",
+                        "text": f"信心 {confidence}%",
+                        "color": "#FFFFFFcc",
+                        "size": "xs",
+                        "align": "end",
+                        "margin": "xs",
+                    },
+                    {
+                        "type": "text",
+                        "text": etf_info.get("risk_level", "-") + " 風險",
+                        "color": "#FFFFFFaa",
+                        "size": "xxs",
+                        "align": "end",
+                        "margin": "xs",
+                    },
+                ],
             },
         ],
     }
 
-    # ── 價格區塊 ──────────────────────────────────────────────────────────────
-    price_box = {
+    # ── 價格 + 停損停利（橫排三欄） ─────────────────────────────────────────
+    price_cols = [
+        {
+            "type": "box",
+            "layout": "vertical",
+            "flex": 1,
+            "contents": [
+                {"type": "text", "text": "現價", "size": "xxs", "color": "#888888"},
+                {"type": "text", "text": f"NT${price:.2f}", "size": "lg",
+                 "weight": "bold", "color": "#212121"},
+                {"type": "text", "text": date_str, "size": "xxs", "color": "#BBBBBB"},
+            ],
+        },
+    ]
+    if stop_loss and take_profit:
+        price_cols += [
+            {"type": "separator", "margin": "sm"},
+            {
+                "type": "box",
+                "layout": "vertical",
+                "flex": 1,
+                "contents": [
+                    {"type": "text", "text": "停損", "size": "xxs", "color": "#888888"},
+                    {"type": "text", "text": f"NT${stop_loss:.2f}", "size": "sm",
+                     "weight": "bold", "color": "#C62828"},
+                ],
+            },
+            {"type": "separator", "margin": "sm"},
+            {
+                "type": "box",
+                "layout": "vertical",
+                "flex": 1,
+                "contents": [
+                    {"type": "text", "text": "停利", "size": "xxs", "color": "#888888"},
+                    {"type": "text", "text": f"NT${take_profit:.2f}", "size": "sm",
+                     "weight": "bold", "color": "#2E7D32"},
+                ],
+            },
+        ]
+
+    price_row = {
+        "type": "box",
+        "layout": "horizontal",
+        "margin": "md",
+        "contents": price_cols,
+    }
+
+    # ── 分數橫條 ──────────────────────────────────────────────────────────────
+    score_row = {
         "type": "box",
         "layout": "horizontal",
         "margin": "md",
         "contents": [
             {
-                "type": "box",
-                "layout": "vertical",
-                "flex": 6,
-                "contents": [
-                    {"type": "text", "text": "最新收盤價", "size": "xs", "color": "#888888"},
-                    {"type": "text", "text": f"NT$ {price:.2f}", "size": "xl", "weight": "bold", "color": "#212121"},
-                    {"type": "text", "text": f"資料日期：{date_str}", "size": "xxs", "color": "#AAAAAA"},
-                ],
-            },
-            {
-                "type": "separator",
-                "margin": "md",
+                "type": "text",
+                "text": f"綜合分數 {total_score:+.1f}",
+                "size": "xxs",
+                "color": "#666666",
+                "flex": 0,
             },
             {
                 "type": "box",
                 "layout": "vertical",
-                "flex": 4,
-                "paddingStart": "12px",
-                "contents": [
-                    {"type": "text", "text": "AI 綜合判斷", "size": "xs", "color": "#888888"},
-                    {
-                        "type": "text",
-                        "text": f"{action_meta['emoji']} {final_action}",
-                        "size": "lg",
-                        "weight": "bold",
-                        "color": action_meta["color"],
-                    },
-                    {"type": "text", "text": f"信心度 {confidence}%", "size": "xs", "color": "#888888"},
-                ],
+                "flex": 1,
+                "margin": "sm",
+                "justifyContent": "center",
+                "contents": [_build_score_bar(total_score)],
             },
         ],
     }
 
-    # ── 分數條 ────────────────────────────────────────────────────────────────
-    score_label = f"綜合分數：{total_score:+.1f}"
-    score_bar = _build_score_bar(total_score)
-
-    # ── Agent 彙整 ────────────────────────────────────────────────────────────
-    agent_summary_rows = []
+    # ── Agent 判斷 2×2 橫排格 ────────────────────────────────────────────────
+    agent_cells = []
     for r in agent_results:
         action_color = next(
             (v["color"] for k, v in ACTION_LABELS.items() if k == r["action"]),
             "#546E7A",
         )
-        agent_summary_rows.append({
+        agent_cells.append({
             "type": "box",
-            "layout": "horizontal",
-            "paddingTop": "4px",
-            "paddingBottom": "4px",
+            "layout": "vertical",
+            "flex": 1,
+            "backgroundColor": "#F8F8F8",
+            "cornerRadius": "6px",
+            "paddingAll": "8px",
             "contents": [
                 {
                     "type": "text",
-                    "text": r["agent"],
-                    "size": "sm",
-                    "color": "#333333",
-                    "flex": 5,
+                    "text": r["agent"].replace(" Agent", ""),
+                    "size": "xxs",
+                    "color": "#666666",
+                    "wrap": True,
                 },
                 {
                     "type": "text",
                     "text": r["action"],
-                    "size": "sm",
-                    "color": action_color,
+                    "size": "xs",
                     "weight": "bold",
-                    "align": "end",
-                    "flex": 2,
+                    "color": action_color,
+                    "margin": "xs",
                 },
             ],
         })
 
-    agent_section = {
+    # 兩個一排，共兩排
+    agent_grid = {
         "type": "box",
         "layout": "vertical",
-        "margin": "lg",
+        "margin": "md",
+        "spacing": "sm",
         "contents": [
-            _section_title("🤖 Agent 判斷摘要"),
-            {"type": "separator", "margin": "sm"},
-            *agent_summary_rows,
+            {
+                "type": "box",
+                "layout": "horizontal",
+                "spacing": "sm",
+                "contents": agent_cells[:2],
+            },
+            {
+                "type": "box",
+                "layout": "horizontal",
+                "spacing": "sm",
+                "contents": agent_cells[2:4],
+            },
         ],
     }
 
-    # ── 各 Agent 訊號明細（只顯示前三個 Agent 的訊號，避免卡片過長）──────────
-    _SECTION_TITLES = ["📊 技術面訊號", "📦 量能訊號", "🔭 趨勢訊號"]
-    signal_sections = []
-    for r, title in zip(agent_results[:3], _SECTION_TITLES):
+    # ── 訊號左右雙欄（技術 + 量能 | 趨勢 + 風險） ───────────────────────────
+    _AGENT_TITLES = ["📊 技術", "📦 量能", "🔭 趨勢", "⚠️ 風險"]
+    signal_col_groups = []
+    for r, title in zip(agent_results, _AGENT_TITLES):
         rows = []
-        for sig in r["signals"][:4]:  # 每個 agent 最多顯示 4 個訊號
+        for sig in r["signals"][:3]:
             color = _SIGNAL_COLORS.get(sig["bullish"], "#546E7A")
             rows.append({
                 "type": "box",
                 "layout": "horizontal",
-                "paddingTop": "3px",
-                "paddingBottom": "3px",
+                "paddingTop": "2px",
+                "paddingBottom": "2px",
                 "contents": [
                     {
                         "type": "text",
                         "text": sig["label"],
-                        "size": "xs",
-                        "color": "#555555",
-                        "flex": 3,
+                        "size": "xxs",
+                        "color": "#777777",
+                        "flex": 2,
+                        "wrap": True,
                     },
                     {
                         "type": "text",
-                        "text": sig["value"],
-                        "size": "xs",
+                        "text": sig["value"].split(" ")[0],  # 只取數值/狀態，不含 emoji
+                        "size": "xxs",
                         "color": color,
                         "align": "end",
-                        "flex": 4,
+                        "flex": 3,
                         "wrap": True,
                     },
                 ],
             })
-        if rows:
-            signal_sections.append({
-                "type": "box",
-                "layout": "vertical",
-                "margin": "md",
-                "contents": [
-                    _section_title(title),
-                    {"type": "separator", "margin": "sm"},
-                    *rows,
-                ],
-            })
+        signal_col_groups.append({
+            "type": "box",
+            "layout": "vertical",
+            "flex": 1,
+            "backgroundColor": "#FAFAFA",
+            "cornerRadius": "6px",
+            "paddingAll": "8px",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": title,
+                    "size": "xs",
+                    "weight": "bold",
+                    "color": "#444444",
+                    "margin": "none",
+                },
+                {"type": "separator", "margin": "xs"},
+                *rows,
+            ],
+        })
 
-    # ── 風險 Agent 訊號（獨立顯示）──────────────────────────────────────────
-    risk_result = next((r for r in agent_results if "風險" in r["agent"]), None)
-    risk_section_contents = []
-    if risk_result:
-        for sig in risk_result["signals"]:
-            color = _SIGNAL_COLORS.get(sig["bullish"], "#546E7A")
-            risk_section_contents.append({
-                "type": "box",
-                "layout": "horizontal",
-                "paddingTop": "3px",
-                "paddingBottom": "3px",
-                "contents": [
-                    {"type": "text", "text": sig["label"], "size": "xs", "color": "#555555", "flex": 3},
-                    {"type": "text", "text": sig["value"], "size": "xs", "color": color,
-                     "align": "end", "flex": 4, "wrap": True},
-                ],
-            })
-
-    risk_section = {
+    signal_section = {
         "type": "box",
         "layout": "vertical",
         "margin": "md",
-        "backgroundColor": "#FFF8E1",
-        "paddingAll": "10px",
-        "cornerRadius": "8px",
+        "spacing": "sm",
         "contents": [
-            _section_title("⚠️ 風險評估"),
-            {"type": "separator", "margin": "sm"},
-            *risk_section_contents,
-        ],
-    }
-
-    # ── 停損/停利區塊 ──────────────────────────────────────────────────────────
-    price_target_contents = []
-    if stop_loss and take_profit:
-        price_target_contents = [
-            {"type": "separator", "margin": "lg"},
             {
                 "type": "box",
                 "layout": "horizontal",
-                "margin": "md",
-                "contents": [
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "flex": 1,
-                        "contents": [
-                            {"type": "text", "text": "建議停損", "size": "xs", "color": "#888888"},
-                            {"type": "text", "text": f"NT$ {stop_loss:.2f}", "size": "sm",
-                             "weight": "bold", "color": "#C62828"},
-                        ],
-                    },
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "flex": 1,
-                        "contents": [
-                            {"type": "text", "text": "建議停利", "size": "xs", "color": "#888888", "align": "end"},
-                            {"type": "text", "text": f"NT$ {take_profit:.2f}", "size": "sm",
-                             "weight": "bold", "color": "#2E7D32", "align": "end"},
-                        ],
-                    },
-                ],
+                "spacing": "sm",
+                "contents": signal_col_groups[:2],
             },
-        ]
+            {
+                "type": "box",
+                "layout": "horizontal",
+                "spacing": "sm",
+                "contents": signal_col_groups[2:4],
+            },
+        ],
+    }
 
-    # ── 操作建議區塊 ─────────────────────────────────────────────────────────
-    rec_rows = []
+    # ── 操作建議（compact 單行） ──────────────────────────────────────────────
+    rec_contents = []
     if recommendation:
-        _rec_items = [
-            ("📌 分析", recommendation.get("summary", "")),
-            ("🚪 進場", recommendation.get("entry", "")),
-            ("🎯 出場", recommendation.get("exit", "")),
-            ("💼 倉位", recommendation.get("position", "")),
-        ]
-        for label, value in _rec_items:
-            if value:
-                rec_rows.append({
-                    "type": "box",
-                    "layout": "vertical",
-                    "paddingTop": "5px",
-                    "paddingBottom": "5px",
-                    "contents": [
-                        {"type": "text", "text": label, "size": "xs",
-                         "color": "#777777", "weight": "bold"},
-                        {"type": "text", "text": value, "size": "xs",
-                         "color": "#333333", "wrap": True},
-                    ],
-                })
-        # 特殊備注（槓桿 ETF）
-        note = recommendation.get("note", "")
+        summary = recommendation.get("summary", "")
+        entry   = recommendation.get("entry", "")
+        note    = recommendation.get("note", "")
+        if summary:
+            rec_contents.append({
+                "type": "text", "text": summary,
+                "size": "xs", "color": "#333333", "wrap": True,
+            })
+        if entry:
+            rec_contents.append({
+                "type": "text", "text": entry,
+                "size": "xs", "color": "#555555", "wrap": True, "margin": "xs",
+            })
         if note:
-            rec_rows.append({
-                "type": "text",
-                "text": note,
-                "size": "xs",
-                "color": "#C62828",
-                "wrap": True,
-                "margin": "sm",
-                "weight": "bold",
+            rec_contents.append({
+                "type": "text", "text": note,
+                "size": "xs", "color": "#C62828", "wrap": True,
+                "margin": "sm", "weight": "bold",
             })
 
     rec_section = {
         "type": "box",
         "layout": "vertical",
-        "margin": "lg",
+        "margin": "md",
         "backgroundColor": "#E8F5E9",
         "paddingAll": "10px",
         "cornerRadius": "8px",
         "contents": [
             _section_title("📋 操作建議"),
-            {"type": "separator", "margin": "sm"},
-            *rec_rows,
+            {"type": "separator", "margin": "xs"},
+            *rec_contents,
         ],
-    } if rec_rows else None
+    } if rec_contents else None
 
     # ── Body ─────────────────────────────────────────────────────────────────
     body_contents = [
-        price_box,
-        *price_target_contents,
-        {"type": "separator", "margin": "lg"},
-        {
-            "type": "box",
-            "layout": "vertical",
-            "margin": "lg",
-            "contents": [
-                {"type": "text", "text": score_label, "size": "xs", "color": "#555555"},
-                score_bar,
-            ],
-        },
-        agent_section,
-        *signal_sections,
-        risk_section,
+        price_row,
+        {"type": "separator", "margin": "md"},
+        score_row,
+        {"type": "separator", "margin": "md"},
+        _section_title("🤖 Agent 判斷"),
+        agent_grid,
+        {"type": "separator", "margin": "md"},
+        _section_title("📈 訊號明細"),
+        signal_section,
     ]
     if rec_section:
         body_contents.append(rec_section)
@@ -367,7 +375,7 @@ def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
     body = {
         "type": "box",
         "layout": "vertical",
-        "paddingAll": "16px",
+        "paddingAll": "14px",
         "contents": body_contents,
     }
 
@@ -376,29 +384,22 @@ def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
         "type": "box",
         "layout": "vertical",
         "backgroundColor": "#F5F5F5",
-        "paddingAll": "12px",
+        "paddingAll": "10px",
         "contents": [
             {
                 "type": "text",
-                "text": f"⏱ 更新時間：{generated_at}",
+                "text": f"⏱ {generated_at}　⚠️ 僅供參考，非投資建議",
                 "size": "xxs",
                 "color": "#AAAAAA",
                 "align": "center",
-            },
-            {
-                "type": "text",
-                "text": "⚠️ 本資訊僅供參考，不構成投資建議",
-                "size": "xxs",
-                "color": "#BBBBBB",
-                "align": "center",
-                "margin": "sm",
+                "wrap": True,
             },
         ],
     }
 
     bubble = {
         "type": "bubble",
-        "size": "kilo",
+        "size": "mega",
         "header": header,
         "body": body,
         "footer": footer,
@@ -416,7 +417,7 @@ def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
 
 
 def build_etf_carousel(*analyses: dict) -> dict:
-    """將任意數量 ETF 分析結果組合為 Carousel（左右滑動，最多 12 支）。"""
+    """將任意數量 ETF 分析結果組合為 Carousel（左右滑動）。"""
     bubbles = [build_etf_flex_card(a)["contents"] for a in analyses]
     names = "、".join(a["symbol"] for a in analyses)
     return {
@@ -430,7 +431,6 @@ def build_etf_carousel(*analyses: dict) -> dict:
 
 
 def build_dual_etf_carousel(analysis_0050: dict, analysis_00631L: dict) -> dict:
-    """向下相容：保留舊介面，內部呼叫 build_etf_carousel。"""
     return build_etf_carousel(analysis_0050, analysis_00631L)
 
 
@@ -447,36 +447,30 @@ def _section_title(text: str) -> dict:
 
 
 def _build_score_bar(score: float) -> dict:
-    """
-    用一列方塊視覺化總分（-3.5 ~ +3.5 映射到 0~100%）。
-    正分綠色，負分紅色。
-    """
     clamped = max(-3.5, min(3.5, score))
     pct = int((clamped + 3.5) / 7.0 * 100)
     color = "#2E7D32" if score >= 0 else "#C62828"
-
     return {
         "type": "box",
-        "layout": "vertical",
-        "margin": "xs",
+        "layout": "horizontal",
+        "height": "8px",
+        "backgroundColor": "#EEEEEE",
+        "cornerRadius": "4px",
         "contents": [
             {
                 "type": "box",
                 "layout": "vertical",
+                "backgroundColor": color,
                 "height": "8px",
-                "backgroundColor": "#EEEEEE",
                 "cornerRadius": "4px",
-                "contents": [
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "backgroundColor": color,
-                        "height": "8px",
-                        "cornerRadius": "4px",
-                        "flex": pct,
-                        "contents": [],
-                    },
-                ],
-            }
+                "flex": pct,
+                "contents": [],
+            },
+            {
+                "type": "box",
+                "layout": "vertical",
+                "flex": 100 - pct,
+                "contents": [],
+            },
         ],
     }
