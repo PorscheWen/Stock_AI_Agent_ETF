@@ -1,38 +1,69 @@
 """
-SQLite 資料管理（仿 What_To_Eat db.js 模式）
-- subscribers：訂閱者清單
-- analysis_cache：各 ETF 最新分析結果快取
+資料管理 — PostgreSQL（Render，DATABASE_URL）或 SQLite（本機 fallback）
 """
 from __future__ import annotations
 
 import json
 import os
 import sqlite3
+from contextlib import contextmanager
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+_DATABASE_URL = os.environ.get("DATABASE_URL", "")
 _DB_PATH = os.environ.get("DB_PATH") or str(Path(__file__).parent.parent / "data.db")
+_USE_PG = bool(_DATABASE_URL)
+_PH = "%s" if _USE_PG else "?"
 
 
-def _conn() -> sqlite3.Connection:
-    con = sqlite3.connect(_DB_PATH, check_same_thread=False)
-    con.row_factory = sqlite3.Row
-    return con
+@contextmanager
+def _conn():
+    if _USE_PG:
+        import psycopg2
+        import psycopg2.extras
+        con = psycopg2.connect(_DATABASE_URL)
+        try:
+            yield con
+            con.commit()
+        except Exception:
+            con.rollback()
+            raise
+        finally:
+            con.close()
+    else:
+        con = sqlite3.connect(_DB_PATH, check_same_thread=False)
+        con.row_factory = sqlite3.Row
+        try:
+            yield con
+            con.commit()
+        finally:
+            con.close()
+
+
+def _exec(con, sql: str, params=()):
+    if _USE_PG:
+        import psycopg2.extras
+        cur = con.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(sql, params)
+        return cur
+    return con.execute(sql, params)
 
 
 def init_db() -> None:
+    _joined_default = "NOW()" if _USE_PG else "datetime('now','localtime')"
     with _conn() as con:
-        con.execute("""
+        _exec(con, f"""
             CREATE TABLE IF NOT EXISTS subscribers (
                 user_id   TEXT PRIMARY KEY,
-                joined_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+                joined_at TEXT NOT NULL DEFAULT ({_joined_default})
             )
         """)
-        con.execute("""
+        _exec(con, """
             CREATE TABLE IF NOT EXISTS analysis_cache (
                 symbol     TEXT PRIMARY KEY,
                 result     TEXT NOT NULL,
-                updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+                updated_at TEXT NOT NULL
             )
         """)
 
@@ -41,48 +72,44 @@ def init_db() -> None:
 
 def add_subscriber(user_id: str) -> None:
     with _conn() as con:
-        con.execute(
-            "INSERT OR IGNORE INTO subscribers (user_id) VALUES (?)",
+        _exec(con,
+            f"INSERT INTO subscribers (user_id) VALUES ({_PH}) ON CONFLICT (user_id) DO NOTHING",
             (user_id,),
         )
 
 
 def remove_subscriber(user_id: str) -> None:
     with _conn() as con:
-        con.execute("DELETE FROM subscribers WHERE user_id = ?", (user_id,))
+        _exec(con, f"DELETE FROM subscribers WHERE user_id = {_PH}", (user_id,))
 
 
 def get_subscribers() -> list[str]:
     with _conn() as con:
-        rows = con.execute("SELECT user_id FROM subscribers").fetchall()
+        rows = _exec(con, "SELECT user_id FROM subscribers").fetchall()
     return [r["user_id"] for r in rows]
 
 
 # ── 分析快取 ──────────────────────────────────────────────────────────────────
 
 def save_analysis(symbol: str, analysis: dict[str, Any]) -> None:
-    """儲存（或覆寫）某支 ETF 的分析結果。"""
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     with _conn() as con:
-        con.execute(
-            """
+        _exec(con,
+            f"""
             INSERT INTO analysis_cache (symbol, result, updated_at)
-            VALUES (?, ?, datetime('now','localtime'))
-            ON CONFLICT(symbol) DO UPDATE SET
-                result     = excluded.result,
-                updated_at = excluded.updated_at
+            VALUES ({_PH}, {_PH}, {_PH})
+            ON CONFLICT (symbol) DO UPDATE SET
+                result     = EXCLUDED.result,
+                updated_at = EXCLUDED.updated_at
             """,
-            (symbol, json.dumps(analysis, ensure_ascii=False)),
+            (symbol, json.dumps(analysis, ensure_ascii=False), now),
         )
 
 
 def get_analysis(symbol: str) -> tuple[dict[str, Any], str] | None:
-    """
-    取得某支 ETF 的快取分析結果。
-    回傳 (analysis_dict, updated_at_str)，若無快取則回傳 None。
-    """
     with _conn() as con:
-        row = con.execute(
-            "SELECT result, updated_at FROM analysis_cache WHERE symbol = ?",
+        row = _exec(con,
+            f"SELECT result, updated_at FROM analysis_cache WHERE symbol = {_PH}",
             (symbol,),
         ).fetchone()
     if row is None:
