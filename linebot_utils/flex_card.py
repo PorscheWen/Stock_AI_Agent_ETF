@@ -58,12 +58,24 @@ def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
                 "layout": "horizontal",
                 "contents": [
                     {
-                        "type": "text",
-                        "text": f"{etf_info['name']} ({symbol})",
-                        "color": "#FFFFFF",
-                        "size": "lg",
-                        "weight": "bold",
+                        "type": "box",
+                        "layout": "vertical",
                         "flex": 4,
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": etf_info['name'],
+                                "color": "#FFFFFF",
+                                "size": "lg",
+                                "weight": "bold",
+                            },
+                            {
+                                "type": "text",
+                                "text": f"({symbol})",
+                                "color": "#FFFFFFcc",
+                                "size": "sm",
+                            },
+                        ],
                     },
                     {
                         "type": "text",
