@@ -146,7 +146,7 @@ def handle_message_event(event: MessageEvent) -> None:
 
     try:
         if target == "all":
-            _reply_all_cached(api, reply_token)
+            _reply_all_cached(api, reply_token, user_id)
         else:
             _reply_single_cached(api, reply_token, target, user_id)
     except Exception as exc:
@@ -177,8 +177,10 @@ def _reply_single_cached(api: MessagingApi, reply_token: str, symbol: str, user_
         _push_fresh(api, user_id, symbol)  # 使用 user_id 推播結果
 
 
-def _reply_all_cached(api: MessagingApi, reply_token: str) -> None:
+def _reply_all_cached(api: MessagingApi, reply_token: str, user_id: str) -> None:
     """全部 ETF 快取結果 Carousel；任一無快取則即時分析該支。"""
+    from linebot.v3.messaging import PushMessageRequest
+
     symbols = list(ETF_CONFIG.keys())
     analyses = []
     missing = []
@@ -190,6 +192,7 @@ def _reply_all_cached(api: MessagingApi, reply_token: str) -> None:
             missing.append(s)
 
     if missing:
+        # reply_token 只能用一次：先回覆「分析中」，結果用 push 推播
         _reply_text(api, reply_token,
                     f"⏳ {', '.join(missing)} 尚無快取，正在分析，完成後將推播...")
         for s in missing:
@@ -199,18 +202,32 @@ def _reply_all_cached(api: MessagingApi, reply_token: str) -> None:
             save_analysis(s, result)
             analyses.append((s, result, result["generated_at"]))
 
-    analyses.sort(key=lambda x: symbols.index(x[0]))
-    latest_time = max(a[2] for a in analyses)
-    carousel = build_etf_carousel(*[a[1] for a in analyses])
+        analyses.sort(key=lambda x: symbols.index(x[0]))
+        latest_time = max(a[2] for a in analyses)
+        carousel = build_etf_carousel(*[a[1] for a in analyses])
 
-    messages = [
-        TextMessage(text=f"📂 全部 ETF 上次分析：{latest_time}"),
-        FlexMessage(
-            alt_text=carousel["altText"],
-            contents=FlexContainer.from_dict(carousel["contents"]),
-        ),
-    ]
-    api.reply_message(ReplyMessageRequest(reply_token=reply_token, messages=messages))
+        messages = [
+            TextMessage(text=f"📊 全部 ETF 分析完成：{latest_time}"),
+            FlexMessage(
+                alt_text=carousel["altText"],
+                contents=FlexContainer.from_dict(carousel["contents"]),
+            ),
+        ]
+        api.push_message(PushMessageRequest(to=user_id, messages=messages))
+    else:
+        # 全部都有快取 → 直接 reply
+        analyses.sort(key=lambda x: symbols.index(x[0]))
+        latest_time = max(a[2] for a in analyses)
+        carousel = build_etf_carousel(*[a[1] for a in analyses])
+
+        messages = [
+            TextMessage(text=f"📂 全部 ETF 上次分析：{latest_time}"),
+            FlexMessage(
+                alt_text=carousel["altText"],
+                contents=FlexContainer.from_dict(carousel["contents"]),
+            ),
+        ]
+        api.reply_message(ReplyMessageRequest(reply_token=reply_token, messages=messages))
 
 
 # ── 強制重新分析（刷新） ──────────────────────────────────────────────────────
