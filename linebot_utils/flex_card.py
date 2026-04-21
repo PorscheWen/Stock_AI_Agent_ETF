@@ -120,42 +120,36 @@ def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
         ],
     }
 
-    # ── 價格 + 停損停利（橫排三欄） ─────────────────────────────────────────
-    price_cols = [
-        {
-            "type": "box",
-            "layout": "vertical",
-            "flex": 1,
-            "contents": [
-                {"type": "text", "text": "現價", "size": "xxs", "color": "#888888"},
-                {"type": "text", "text": f"NT${price:.2f}", "size": "lg",
-                 "weight": "bold", "color": "#212121"},
-                {"type": "text", "text": date_str, "size": "xxs", "color": "#BBBBBB"},
-            ],
-        },
-    ]
+    # ── 價格 + 停損停利（左側現價 / 右側停損+停利同欄） ────────────────────
+    price_right = []
     if stop_loss and take_profit:
-        price_cols += [
+        price_right = [
             {"type": "separator", "margin": "sm"},
             {
                 "type": "box",
                 "layout": "vertical",
                 "flex": 1,
+                "alignItems": "flex-end",
                 "contents": [
-                    {"type": "text", "text": "停損", "size": "xxs", "color": "#888888"},
-                    {"type": "text", "text": f"NT${stop_loss:.2f}", "size": "sm",
-                     "weight": "bold", "color": "#C62828"},
-                ],
-            },
-            {"type": "separator", "margin": "sm"},
-            {
-                "type": "box",
-                "layout": "vertical",
-                "flex": 1,
-                "contents": [
-                    {"type": "text", "text": "停利", "size": "xxs", "color": "#888888"},
-                    {"type": "text", "text": f"NT${take_profit:.2f}", "size": "sm",
-                     "weight": "bold", "color": "#2E7D32"},
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "contents": [
+                            {"type": "text", "text": "停損", "size": "xxs", "color": "#888888", "flex": 0},
+                            {"type": "text", "text": f"  NT${stop_loss:.2f}", "size": "sm",
+                             "weight": "bold", "color": "#C62828", "flex": 0},
+                        ],
+                    },
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "margin": "sm",
+                        "contents": [
+                            {"type": "text", "text": "停利", "size": "xxs", "color": "#888888", "flex": 0},
+                            {"type": "text", "text": f"  NT${take_profit:.2f}", "size": "sm",
+                             "weight": "bold", "color": "#2E7D32", "flex": 0},
+                        ],
+                    },
                 ],
             },
         ]
@@ -164,7 +158,20 @@ def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
         "type": "box",
         "layout": "horizontal",
         "margin": "md",
-        "contents": price_cols,
+        "contents": [
+            {
+                "type": "box",
+                "layout": "vertical",
+                "flex": 2,
+                "contents": [
+                    {"type": "text", "text": "現價", "size": "xxs", "color": "#888888"},
+                    {"type": "text", "text": f"NT${price:.2f}", "size": "xl",
+                     "weight": "bold", "color": "#212121", "adjustMode": "shrink-to-fit"},
+                    {"type": "text", "text": date_str, "size": "xxs", "color": "#BBBBBB"},
+                ],
+            },
+            *price_right,
+        ],
     }
 
     # ── 分數橫條 ──────────────────────────────────────────────────────────────
