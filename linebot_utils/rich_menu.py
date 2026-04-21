@@ -108,7 +108,7 @@ def build_rich_menu_image() -> bytes:
     pad = 10
 
     font_main = _get_font(90)
-    font_sub  = _get_font(46)
+    font_sub  = _get_font(90)  # 與主標籤相同大小
 
     for i, (label, sub, color, _) in enumerate(_BUTTONS):
         row, col = divmod(i, _COLS)
