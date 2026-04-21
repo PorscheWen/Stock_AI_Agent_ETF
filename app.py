@@ -43,9 +43,9 @@ _parser: WebhookParser | None = None
 def _get_parser() -> WebhookParser:
     global _parser
     if _parser is None:
-        secret = os.environ.get("LINE_CHANNEL_SECRET", "")
+        secret = os.environ.get("CHANNEL_STOCK_SECRET", "")
         if not secret:
-            raise RuntimeError("LINE_CHANNEL_SECRET 環境變數未設定")
+            raise RuntimeError("CHANNEL_STOCK_SECRET 環境變數未設定")
         _parser = WebhookParser(secret)
     return _parser
 

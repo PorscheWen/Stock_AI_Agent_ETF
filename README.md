@@ -35,9 +35,9 @@ MA/RSI/MACD   OBV/量比       動能/突破       ATR/回撤
 
 | Secret | 說明 |
 |--------|------|
-| `LINE_CHANNEL_SECRET` | LINE Bot Channel Secret |
-| `LINE_CHANNEL_ACCESS_TOKEN` | LINE Bot Token |
-| `LINE_USER_ID` | 推播目標用戶 ID |
+| `CHANNEL_STOCK_SECRET` | LINE Bot Channel Secret |
+| `CHANNEL_STOCK_ACCESS_TOKEN` | LINE Bot Token |
+| `CHANNEL_STOCK_USER_ID` | 推播目標用戶 ID |
 
 ## 快速啟動（本機執行）
 
@@ -47,7 +47,7 @@ pip install -r requirements.txt
 
 # 2. 設定環境變數
 cp .env.example .env
-# 填入 LINE_CHANNEL_SECRET、LINE_CHANNEL_ACCESS_TOKEN、LINE_USER_ID
+# 填入 CHANNEL_STOCK_SECRET、CHANNEL_STOCK_ACCESS_TOKEN、CHANNEL_STOCK_USER_ID
 
 # 3. 立即推播雙 ETF
 python main.py

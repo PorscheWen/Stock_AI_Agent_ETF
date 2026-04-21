@@ -1,7 +1,7 @@
 """
 LINE Push Notifier
 主動推播 ETF 分析報告，不需要 Flask / ngrok / Webhook。
-訂閱者清單優先從 SQLite 讀取（Render 環境），退回 LINE_USER_IDS 環境變數（GitHub Actions）。
+訂閱者清單優先從 SQLite 讀取（Render 環境），退回 CHANNEL_STOCK_USER_IDS 環境變數（GitHub Actions）。
 """
 from __future__ import annotations
 
@@ -31,9 +31,9 @@ logger = logging.getLogger(__name__)
 
 
 def _get_api() -> MessagingApi:
-    token = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN", "")
+    token = os.environ.get("CHANNEL_STOCK_ACCESS_TOKEN", "")
     if not token:
-        raise RuntimeError("LINE_CHANNEL_ACCESS_TOKEN 未設定")
+        raise RuntimeError("CHANNEL_STOCK_ACCESS_TOKEN 未設定")
     return MessagingApi(ApiClient(Configuration(access_token=token)))
 
 
@@ -41,8 +41,8 @@ def _get_user_ids() -> list[str]:
     """
     訂閱者清單讀取順序：
     1. SQLite data.db（Render web service 有 DB 時使用）
-    2. LINE_USER_IDS 環境變數（逗號分隔，GitHub Actions fallback）
-    3. LINE_USER_ID 環境變數（單人向下相容）
+    2. CHANNEL_STOCK_USER_IDS 環境變數（逗號分隔，GitHub Actions fallback）
+    3. CHANNEL_STOCK_USER_ID 環境變數（單人向下相容）
     """
     try:
         from data.db import get_subscribers
@@ -53,18 +53,18 @@ def _get_user_ids() -> list[str]:
     except Exception as exc:
         logger.warning("[Push] 無法讀取 DB，改用環境變數：%s", exc)
 
-    ids_env = os.environ.get("LINE_USER_IDS", "")
+    ids_env = os.environ.get("CHANNEL_STOCK_USER_IDS", "")
     if ids_env:
         ids = [uid.strip() for uid in ids_env.split(",") if uid.strip()]
         if ids:
-            logger.info("[Push] 從 LINE_USER_IDS 讀取 %d 人", len(ids))
+            logger.info("[Push] 從 CHANNEL_STOCK_USER_IDS 讀取 %d 人", len(ids))
             return ids
 
-    single = os.environ.get("LINE_USER_ID", "").strip()
+    single = os.environ.get("CHANNEL_STOCK_USER_ID", "").strip()
     if single:
         return [single]
 
-    raise RuntimeError("找不到任何訂閱者（DB 空、LINE_USER_IDS、LINE_USER_ID 皆未設定）")
+    raise RuntimeError("找不到任何訂閱者（DB 空、CHANNEL_STOCK_USER_IDS、CHANNEL_STOCK_USER_ID 皆未設定）")
 
 
 def _send(api: MessagingApi, user_ids: list[str], messages: list) -> None:

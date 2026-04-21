@@ -93,7 +93,7 @@ def build_rich_menu_image() -> bytes:
 
 def setup_rich_menu() -> str:
     """建立 Rich Menu、上傳圖片、設為預設，回傳 rich_menu_id。"""
-    token = os.environ["LINE_CHANNEL_ACCESS_TOKEN"]
+    token = os.environ["CHANNEL_STOCK_ACCESS_TOKEN"]
     config = Configuration(access_token=token)
 
     cell_w = _W // _COLS
@@ -149,7 +149,7 @@ def setup_rich_menu() -> str:
 
 def delete_all_rich_menus() -> int:
     """刪除帳號下所有 Rich Menu（重設用）。"""
-    token = os.environ["LINE_CHANNEL_ACCESS_TOKEN"]
+    token = os.environ["CHANNEL_STOCK_ACCESS_TOKEN"]
     config = Configuration(access_token=token)
     with ApiClient(config) as api_client:
         api = MessagingApi(api_client)

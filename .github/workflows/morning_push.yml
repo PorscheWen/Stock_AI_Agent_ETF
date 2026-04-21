@@ -21,7 +21,7 @@ jobs:
       - name: 執行 ETF 推播
         run: python main.py
         env:
-          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.CHANNEL_STOCK_ACCESS_TOKEN }}
-          LINE_CHANNEL_SECRET: ${{ secrets.LINE_CHANNEL_SECRET }}
-          LINE_USER_IDS: ${{ secrets.LINE_USER_IDS }}
+          CHANNEL_STOCK_ACCESS_TOKEN: ${{ secrets.CHANNEL_STOCK_ACCESS_TOKEN }}
+          CHANNEL_STOCK_SECRET: ${{ secrets.CHANNEL_STOCK_SECRET }}
+          CHANNEL_STOCK_USER_ID: ${{ secrets.CHANNEL_STOCK_USER_ID }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

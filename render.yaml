@@ -20,9 +20,9 @@ services:
         fromDatabase:
           name: etf-db
           property: connectionString
-      - key: LINE_CHANNEL_SECRET
+      - key: CHANNEL_STOCK_SECRET
         sync: false
-      - key: LINE_CHANNEL_ACCESS_TOKEN
+      - key: CHANNEL_STOCK_ACCESS_TOKEN
         sync: false
       - key: PUSH_SECRET
         sync: false

@@ -60,7 +60,7 @@ UNSUBSCRIBE_TEXT = "🔕 已取消訂閱，不再接收每日推播。"
 
 
 def _messaging_api() -> MessagingApi:
-    config = Configuration(access_token=os.environ["LINE_CHANNEL_ACCESS_TOKEN"])
+    config = Configuration(access_token=os.environ["CHANNEL_STOCK_ACCESS_TOKEN"])
     return MessagingApi(ApiClient(config))
 
 

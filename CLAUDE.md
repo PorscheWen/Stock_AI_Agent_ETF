@@ -26,9 +26,9 @@ Orchestrator（並行呼叫 4 個 Agent）
 ## 必要 Secrets
 | Secret | 說明 |
 |---|---|
-| `LINE_CHANNEL_SECRET` | LINE Bot Channel Secret |
-| `LINE_CHANNEL_ACCESS_TOKEN` | LINE Bot Token |
-| `LINE_USER_ID` | 推播目標用戶 ID |
+| `CHANNEL_STOCK_SECRET` | LINE Bot Channel Secret |
+| `CHANNEL_STOCK_ACCESS_TOKEN` | LINE Bot Token |
+| `CHANNEL_STOCK_USER_ID` | 推播目標用戶 ID |
 
 ## 注意事項
 - 使用 LINE Push API，不需要 Webhook/Flask/ngrok
