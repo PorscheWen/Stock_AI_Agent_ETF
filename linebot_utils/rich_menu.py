@@ -41,18 +41,40 @@ _BUTTONS = [
 
 def _get_font(size: int):
     from PIL import ImageFont
+    import requests
+    import io
+    
+    # 優先使用系統字型
     for path in [
-        "C:/Windows/Fonts/msjhbd.ttc",        # Windows 微軟正黑粗體
-        "C:/Windows/Fonts/msjh.ttc",           # Windows 微軟正黑
-        "C:/Windows/Fonts/arial.ttf",
+        # Linux (Render/Ubuntu)
         "/usr/share/fonts/truetype/noto/NotoSansCJK-Bold.ttc",
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
+        "/usr/share/fonts/truetype/noto/NotoSansTC-Bold.ttf",
         "/usr/share/fonts/opentype/noto/NotoSansCJKtc-Bold.otf",
+        # Windows (本機開發)
+        "C:/Windows/Fonts/msjhbd.ttc",
+        "C:/Windows/Fonts/msjh.ttc",
+        # 後備字型
         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
     ]:
         try:
             return ImageFont.truetype(path, size)
         except Exception:
             continue
+    
+    # 如果系統沒有字型，從 Google Fonts 下載（Render 環境）
+    try:
+        logger.info("[RichMenu] 系統字型不可用，下載 Google Fonts Noto Sans TC")
+        font_url = "https://github.com/notofonts/noto-cjk/raw/main/Sans/OTF/TraditionalChinese/NotoSansTC-Bold.otf"
+        resp = requests.get(font_url, timeout=10)
+        if resp.status_code == 200:
+            return ImageFont.truetype(io.BytesIO(resp.content), size)
+    except Exception as e:
+        logger.warning("[RichMenu] 無法下載字型：%s", e)
+    
+    # 最後使用預設字型（會顯示亂碼）
+    logger.warning("[RichMenu] 使用預設字型，中文可能顯示為方框")
     return ImageFont.load_default()
 
 
