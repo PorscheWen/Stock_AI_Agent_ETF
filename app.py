@@ -62,6 +62,36 @@ def health():
     return {"status": "ok"}, 200
 
 
+@app.get("/test_push")
+def test_push():
+    """測試推播是否正常（帶入 ?user_id=Uxxxx 驗證）。"""
+    from linebot.v3.messaging import (
+        ApiClient, Configuration, MessagingApi,
+        PushMessageRequest, TextMessage,
+    )
+
+    user_id = request.args.get("user_id", "").strip()
+    if not user_id:
+        return jsonify({"status": "error", "message": "請帶入 user_id，例如 /test_push?user_id=Uxxxx"}), 400
+
+    token = os.environ.get("CHANNEL_STOCK_ACCESS_TOKEN", "")
+    if not token:
+        return jsonify({"status": "error", "message": "CHANNEL_STOCK_ACCESS_TOKEN 環境變數未設定"}), 500
+
+    try:
+        config = Configuration(access_token=token)
+        api = MessagingApi(ApiClient(config))
+        api.push_message(PushMessageRequest(
+            to=user_id,
+            messages=[TextMessage(text="✅ 推播測試成功！Bot 可正常發送訊息。")],
+        ))
+        logger.info("test_push 成功，to=%s", user_id)
+        return jsonify({"status": "ok", "message": f"推播已送出至 {user_id}"}), 200
+    except Exception as exc:
+        logger.exception("test_push 失敗：%s", exc)
+        return jsonify({"status": "error", "message": str(exc)}), 500
+
+
 @app.post("/webhook")
 def webhook():
     signature = request.headers.get("X-Line-Signature", "")
