@@ -40,41 +40,60 @@ _BUTTONS = [
 
 
 def _get_font(size: int):
+    """
+    載入字型，優先從快取，否則從線上下載
+    確保 Render 環境也能正確顯示中文
+    """
     from PIL import ImageFont
     import requests
     import io
+    import tempfile
+    import os as os_module
     
-    # 優先使用系統字型
+    # 快取字型檔案路徑
+    cache_dir = tempfile.gettempdir()
+    font_cache_path = os_module.path.join(cache_dir, "NotoSansTC-Bold.otf")
+    
+    # 嘗試從快取載入
+    if os_module.path.exists(font_cache_path):
+        try:
+            return ImageFont.truetype(font_cache_path, size)
+        except Exception:
+            pass
+    
+    # 嘗試系統字型（本機開發）
     for path in [
-        # Linux (Render/Ubuntu)
-        "/usr/share/fonts/truetype/noto/NotoSansCJK-Bold.ttc",
-        "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
-        "/usr/share/fonts/truetype/noto/NotoSansTC-Bold.ttf",
-        "/usr/share/fonts/opentype/noto/NotoSansCJKtc-Bold.otf",
-        # Windows (本機開發)
-        "C:/Windows/Fonts/msjhbd.ttc",
+        "C:/Windows/Fonts/msjhbd.ttc",  # Windows
         "C:/Windows/Fonts/msjh.ttc",
-        # 後備字型
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+        "/System/Library/Fonts/PingFang.ttc",  # macOS
+        "/usr/share/fonts/truetype/noto/NotoSansCJK-Bold.ttc",  # Linux
     ]:
         try:
             return ImageFont.truetype(path, size)
         except Exception:
             continue
     
-    # 如果系統沒有字型，從 Google Fonts 下載（Render 環境）
+    # 從 Google Fonts 下載 Noto Sans TC 字型（適用於 Render 等無系統字型環境）
     try:
-        logger.info("[RichMenu] 系統字型不可用，下載 Google Fonts Noto Sans TC")
-        font_url = "https://github.com/notofonts/noto-cjk/raw/main/Sans/OTF/TraditionalChinese/NotoSansTC-Bold.otf"
-        resp = requests.get(font_url, timeout=10)
-        if resp.status_code == 200:
-            return ImageFont.truetype(io.BytesIO(resp.content), size)
+        logger.info("[RichMenu] 從 Google Fonts 下載繁體中文字型...")
+        # 使用 Google Fonts 官方 repository（測試可用）
+        font_url = "https://raw.githubusercontent.com/google/fonts/main/ofl/notosanstc/NotoSansTC%5Bwght%5D.ttf"
+        
+        resp = requests.get(font_url, timeout=30)
+        resp.raise_for_status()
+        
+        # 儲存到快取
+        with open(font_cache_path, 'wb') as f:
+            f.write(resp.content)
+        
+        logger.info("[RichMenu] 字型下載成功（%.1f KB），已快取", len(resp.content)/1024)
+        return ImageFont.truetype(io.BytesIO(resp.content), size)
+        
     except Exception as e:
-        logger.warning("[RichMenu] 無法下載字型：%s", e)
+        logger.error("[RichMenu] 字型下載失敗：%s", e)
     
     # 最後使用預設字型（會顯示亂碼）
-    logger.warning("[RichMenu] 使用預設字型，中文可能顯示為方框")
+    logger.warning("[RichMenu] ⚠️ 無法載入中文字型，使用預設字型")
     return ImageFont.load_default()
 
 

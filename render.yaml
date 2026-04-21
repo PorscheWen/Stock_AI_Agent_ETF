@@ -12,7 +12,7 @@ services:
     region: singapore
     plan: free
     branch: main
-    buildCommand: pip install -r requirements.txt
+    buildCommand: bash build.sh
     startCommand: gunicorn app:app --bind 0.0.0.0:${PORT:-5000} --workers 2 --timeout 120
     healthCheckPath: /health
     envVars:
