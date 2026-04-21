@@ -117,5 +117,12 @@ def get_analysis(symbol: str) -> tuple[dict[str, Any], str] | None:
     return json.loads(row["result"]), row["updated_at"]
 
 
+def clear_all_cache() -> None:
+    """清除所有 ETF 分析快取（測試用）"""
+    with _conn() as con:
+        _exec(con, "DELETE FROM analysis_cache")
+        con.commit()
+
+
 # 啟動時自動建表
 init_db()
