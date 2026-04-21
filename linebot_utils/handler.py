@@ -148,7 +148,7 @@ def handle_message_event(event: MessageEvent) -> None:
         if target == "all":
             _reply_all_cached(api, reply_token)
         else:
-            _reply_single_cached(api, reply_token, target)
+            _reply_single_cached(api, reply_token, target, user_id)
     except Exception as exc:
         logger.exception("查詢失敗：%s", exc)
         _reply_text(api, reply_token, f"⚠️ 查詢失敗，請稍後再試。\n錯誤：{exc}")
@@ -156,7 +156,7 @@ def handle_message_event(event: MessageEvent) -> None:
 
 # ── 快取查詢 ──────────────────────────────────────────────────────────────────
 
-def _reply_single_cached(api: MessagingApi, reply_token: str, symbol: str) -> None:
+def _reply_single_cached(api: MessagingApi, reply_token: str, symbol: str, user_id: str) -> None:
     """優先回傳快取結果；無快取才即時分析。"""
     cached = get_analysis(symbol)
     if cached:
@@ -172,9 +172,9 @@ def _reply_single_cached(api: MessagingApi, reply_token: str, symbol: str) -> No
         api.reply_message(ReplyMessageRequest(reply_token=reply_token, messages=messages))
         logger.info("[Cache Hit] %s (%s)", symbol, updated_at)
     else:
-        # 無快取 → 即時分析
+        # 無快取 → 即時分析（先回覆訊息，再用 push 發送結果）
         _reply_text(api, reply_token, f"⏳ 尚無 {symbol} 快取，正在分析中...")
-        _push_fresh(api, None, symbol, reply_token=reply_token)
+        _push_fresh(api, user_id, symbol)  # 使用 user_id 推播結果
 
 
 def _reply_all_cached(api: MessagingApi, reply_token: str) -> None:
