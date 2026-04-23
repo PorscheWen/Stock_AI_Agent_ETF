@@ -29,14 +29,14 @@ services:
       - key: ANTHROPIC_API_KEY
         sync: false
 
-  # Cron job：每個交易日台灣時間 08:00 呼叫 /push 觸發推播
+  # Cron job：每個交易日台灣時間 14:00 呼叫 /push 觸發推播
   - type: cron
-    name: ETF_Morning_Push
+    name: ETF_Afternoon_Push
     runtime: python
     region: singapore
     plan: free
     branch: main
-    schedule: "0 0 * * 1-5"
+    schedule: "0 6 * * 1-5"
     buildCommand: pip install requests
     startCommand: >
       python -c "
