@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
-模擬 LINE Webhook 請求測試 Render 服務
+【已棄用】模擬 LINE Webhook 請求測試 Render 服務
+
+⚠️ 注意：本專案已改為 GitHub Actions 推播模式，不再使用 Webhook
+此腳本保留僅供參考
 """
 import requests
 import json

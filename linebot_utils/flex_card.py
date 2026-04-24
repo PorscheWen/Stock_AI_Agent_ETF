@@ -128,7 +128,7 @@ def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
             {
                 "type": "box",
                 "layout": "vertical",
-                "flex": 1,
+                "flex": 4,
                 "alignItems": "flex-end",
                 "contents": [
                     {
@@ -137,7 +137,7 @@ def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
                         "contents": [
                             {"type": "text", "text": "停損", "size": "xxs", "color": "#888888", "flex": 0},
                             {"type": "text", "text": f"  NT${stop_loss:.2f}", "size": "sm",
-                             "weight": "bold", "color": "#C62828", "flex": 0},
+                             "weight": "bold", "color": "#2E7D32", "flex": 0},
                         ],
                     },
                     {
@@ -147,7 +147,7 @@ def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
                         "contents": [
                             {"type": "text", "text": "停利", "size": "xxs", "color": "#888888", "flex": 0},
                             {"type": "text", "text": f"  NT${take_profit:.2f}", "size": "sm",
-                             "weight": "bold", "color": "#2E7D32", "flex": 0},
+                             "weight": "bold", "color": "#C62828", "flex": 0},
                         ],
                     },
                 ],
@@ -162,7 +162,7 @@ def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
             {
                 "type": "box",
                 "layout": "vertical",
-                "flex": 2,
+                "flex": 6,
                 "contents": [
                     {"type": "text", "text": "現價", "size": "xxs", "color": "#888888"},
                     {"type": "text", "text": f"NT${price:.2f}", "size": "xl",

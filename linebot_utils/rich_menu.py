@@ -1,5 +1,10 @@
 """
-LINE Rich Menu 建立工具
+【已棄用】LINE Rich Menu 建立工具
+
+⚠️ 注意：本專案已改為 GitHub Actions 自動推播模式，不再使用 Rich Menu
+此檔案保留僅供參考，所有功能已停用
+
+原功能說明：
 呼叫一次 /setup_rich_menu 完成設定，之後所有用戶自動顯示選單。
 
 佈局（3×2）：
@@ -8,194 +13,25 @@ LINE Rich Menu 建立工具
 """
 from __future__ import annotations
 
-import io
 import logging
-import os
-
-import requests
-from linebot.v3.messaging import (
-    ApiClient,
-    Configuration,
-    MessageAction,
-    MessagingApi,
-    RichMenuArea,
-    RichMenuBounds,
-    RichMenuRequest,
-    RichMenuSize,
-)
 
 logger = logging.getLogger(__name__)
 
-_W, _H = 2500, 843
-_COLS, _ROWS = 3, 2
-
-_BUTTONS = [
-    ("0050",    "元大台灣50",  "#1565C0", "0050"),
-    ("00631L",  "台灣50正2",  "#6A1B9A", "00631L"),
-    ("009816",  "凱基TOP50",  "#00695C", "009816"),
-    ("00981A",  "統一成長",   "#4527A0", "00981A"),
-    ("全部比較", "4支ETF總覽", "#37474F", "分析"),
-    ("操作說明", "指令 & 訂閱", "#BF360C", "說明"),
-]
-
-
-def _get_font(size: int):
-    """
-    載入字型，優先從快取，否則從線上下載
-    確保 Render 環境也能正確顯示中文
-    """
-    from PIL import ImageFont
-    import requests
-    import io
-    import tempfile
-    import os as os_module
-    
-    # 快取字型檔案路徑
-    cache_dir = tempfile.gettempdir()
-    font_cache_path = os_module.path.join(cache_dir, "NotoSansTC-Bold.otf")
-    
-    # 嘗試從快取載入
-    if os_module.path.exists(font_cache_path):
-        try:
-            return ImageFont.truetype(font_cache_path, size)
-        except Exception:
-            pass
-    
-    # 嘗試系統字型（本機開發）
-    for path in [
-        "C:/Windows/Fonts/msjhbd.ttc",  # Windows
-        "C:/Windows/Fonts/msjh.ttc",
-        "/System/Library/Fonts/PingFang.ttc",  # macOS
-        "/usr/share/fonts/truetype/noto/NotoSansCJK-Bold.ttc",  # Linux
-    ]:
-        try:
-            return ImageFont.truetype(path, size)
-        except Exception:
-            continue
-    
-    # 從 Google Fonts 下載 Noto Sans TC 字型（適用於 Render 等無系統字型環境）
-    try:
-        logger.info("[RichMenu] 從 Google Fonts 下載繁體中文字型...")
-        # 使用 Google Fonts 官方 repository（測試可用）
-        font_url = "https://raw.githubusercontent.com/google/fonts/main/ofl/notosanstc/NotoSansTC%5Bwght%5D.ttf"
-        
-        resp = requests.get(font_url, timeout=30)
-        resp.raise_for_status()
-        
-        # 儲存到快取
-        with open(font_cache_path, 'wb') as f:
-            f.write(resp.content)
-        
-        logger.info("[RichMenu] 字型下載成功（%.1f KB），已快取", len(resp.content)/1024)
-        return ImageFont.truetype(io.BytesIO(resp.content), size)
-        
-    except Exception as e:
-        logger.error("[RichMenu] 字型下載失敗：%s", e)
-    
-    # 最後使用預設字型（會顯示亂碼）
-    logger.warning("[RichMenu] ⚠️ 無法載入中文字型，使用預設字型")
-    return ImageFont.load_default()
+# ══════════════════════════════════════════════════════════════════════════════
+# 所有功能已停用，保留空實作避免 import 錯誤
+# ══════════════════════════════════════════════════════════════════════════════
 
 
 def build_rich_menu_image() -> bytes:
-    from PIL import Image, ImageDraw
-
-    img = Image.new("RGB", (_W, _H), "#EEEEEE")
-    draw = ImageDraw.Draw(img)
-
-    cell_w = _W // _COLS
-    cell_h = _H // _ROWS
-    pad = 10
-
-    font_main = _get_font(90)
-    font_sub  = _get_font(90)  # 與主標籤相同大小
-
-    for i, (label, sub, color, _) in enumerate(_BUTTONS):
-        row, col = divmod(i, _COLS)
-        x0 = col * cell_w + pad
-        y0 = row * cell_h + pad
-        x1 = (col + 1) * cell_w - pad
-        y1 = (row + 1) * cell_h - pad
-        cx = (x0 + x1) // 2
-        cy = (y0 + y1) // 2
-
-        # 背景
-        draw.rounded_rectangle([x0, y0, x1, y1], radius=24, fill=color)
-
-        # 主標籤
-        draw.text((cx, cy - 28), label, fill="#FFFFFF", font=font_main, anchor="mm")
-        # 副標籤
-        draw.text((cx, cy + 62), sub,   fill="#FFFFFFBB", font=font_sub,  anchor="mm")
-
-    buf = io.BytesIO()
-    img.save(buf, format="PNG")
-    return buf.getvalue()
+    """已棄用 - Rich Menu 功能已停用"""
+    raise NotImplementedError("Rich Menu 功能已停用，本專案已改為 GitHub Actions 推播模式")
 
 
 def setup_rich_menu() -> str:
-    """建立 Rich Menu、上傳圖片、設為預設，回傳 rich_menu_id。"""
-    token = os.environ["CHANNEL_STOCK_ACCESS_TOKEN"]
-    config = Configuration(access_token=token)
-
-    cell_w = _W // _COLS
-    cell_h = _H // _ROWS
-
-    areas = []
-    for i, (label, _, _, msg) in enumerate(_BUTTONS):
-        row, col = divmod(i, _COLS)
-        areas.append(RichMenuArea(
-            bounds=RichMenuBounds(
-                x=col * cell_w,
-                y=row * cell_h,
-                width=cell_w,
-                height=cell_h,
-            ),
-            action=MessageAction(label=label, text=msg),
-        ))
-
-    with ApiClient(config) as api_client:
-        api = MessagingApi(api_client)
-
-        rich_menu_id = api.create_rich_menu(
-            RichMenuRequest(
-                size=RichMenuSize(width=_W, height=_H),
-                selected=True,
-                name="ETF AI 分析選單",
-                chat_bar_text="📊 ETF 查詢",
-                areas=areas,
-            )
-        ).rich_menu_id
-
-    # 圖片上傳使用 requests（SDK blob API 相容性較差）
-    image_bytes = build_rich_menu_image()
-    resp = requests.post(
-        f"https://api-data.line.me/v2/bot/richmenu/{rich_menu_id}/content",
-        headers={
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "image/png",
-        },
-        data=image_bytes,
-        timeout=30,
-    )
-    resp.raise_for_status()
-
-    # 設為預設選單
-    with ApiClient(config) as api_client:
-        api = MessagingApi(api_client)
-        api.set_default_rich_menu(rich_menu_id)
-
-    logger.info("[RichMenu] 設定完成：%s", rich_menu_id)
-    return rich_menu_id
+    """已棄用 - Rich Menu 功能已停用"""
+    raise NotImplementedError("Rich Menu 功能已停用，本專案已改為 GitHub Actions 推播模式")
 
 
 def delete_all_rich_menus() -> int:
-    """刪除帳號下所有 Rich Menu（重設用）。"""
-    token = os.environ["CHANNEL_STOCK_ACCESS_TOKEN"]
-    config = Configuration(access_token=token)
-    with ApiClient(config) as api_client:
-        api = MessagingApi(api_client)
-        menus = api.get_rich_menu_list().richmenus or []
-        for m in menus:
-            api.delete_rich_menu(m.rich_menu_id)
-    logger.info("[RichMenu] 已刪除 %d 個選單", len(menus))
-    return len(menus)
+    """已棄用 - Rich Menu 功能已停用"""
+    raise NotImplementedError("Rich Menu 功能已停用，本專案已改為 GitHub Actions 推播模式")

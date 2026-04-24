@@ -1,2 +1,21 @@
-data.db
+.env
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Test reports
+test_report.md
+
+# Output files
 out.txt

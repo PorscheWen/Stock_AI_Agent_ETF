@@ -38,6 +38,7 @@ MA/RSI/MACD   OBV/量比       動能/突破       ATR/回撤
 | `CHANNEL_STOCK_SECRET` | LINE Bot Channel Secret |
 | `CHANNEL_STOCK_ACCESS_TOKEN` | LINE Bot Token |
 | `CHANNEL_STOCK_USER_ID` | 推播目標用戶 ID |
+| `ANTHROPIC_API_KEY` | Claude AI API Key（用於 Agent 分析）|
 
 ## 快速啟動（本機執行）
 
@@ -77,7 +78,24 @@ python main.py --schedule
 │   └── orchestrator.py         # 多 Agent 協調器
 └── linebot_utils/
     ├── flex_card.py            # Flex Message 卡片產生器
-    └── handler.py              # 推播邏輯
+    ├── line_push.py            # LINE 推播工具
+    ├── handler.py              # ❌ 已棄用（Webhook 事件處理）
+    └── rich_menu.py            # ❌ 已棄用（Rich Menu 建立）
 ```
+
+## 已棄用功能
+
+本專案已改為**純推播模式**（GitHub Actions），以下功能已停用：
+
+| 檔案 | 說明 | 狀態 |
+|------|------|------|
+| `app.py` | Flask Webhook 處理 | ⚠️ 僅保留健康檢查端點 |
+| `linebot_utils/handler.py` | Webhook 事件處理器 | ❌ 已停用 |
+| `linebot_utils/rich_menu.py` | Rich Menu 建立工具 | ❌ 已停用 |
+| `check_webhook.py` | Webhook 檢查腳本 | ❌ 已停用 |
+| `test_webhook.py` | Webhook 測試腳本 | ❌ 已停用 |
+| `reset_rich_menu.py` | Rich Menu 重置腳本 | ❌ 已停用 |
+
+**備註**：系統不再接受用戶 Webhook 互動或 Rich Menu 指令，僅透過 GitHub Actions 自動推播。
 
 > ⚠️ 本專案資訊僅供參考，不構成任何投資建議。

@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
-檢查和設定 LINE Bot Webhook
+【已棄用】檢查和設定 LINE Bot Webhook
+
+⚠️ 注意：本專案已改為 GitHub Actions 推播模式，不再使用 Webhook
+此腳本保留僅供參考
 """
 import os
 import requests

@@ -1,31 +1,13 @@
 """
-主程式 — Flask + LINE Webhook
-參考 What_To_Eat 模式：先回 200，再背景執行，避免 LINE webhook 逾時。
-支援 follow/unfollow 事件自動訂閱，及 /push 端點供 Render cron job 觸發。
+簡化版 Flask App（僅提供健康檢查）
+本專案已改為 Push 模式，透過 GitHub Actions 自動推播
+不再接受用戶 Webhook 指令或 Rich Menu 互動
 """
 from __future__ import annotations
 
 import logging
-import os
-import threading
-
 from dotenv import load_dotenv
-from flask import Flask, abort, jsonify, request
-
-from linebot.v3 import WebhookParser
-from linebot.v3.exceptions import InvalidSignatureError
-from linebot.v3.webhooks import (
-    FollowEvent,
-    MessageEvent,
-    TextMessageContent,
-    UnfollowEvent,
-)
-
-from linebot_utils.handler import (
-    handle_follow_event,
-    handle_message_event,
-    handle_unfollow_event,
-)
+from flask import Flask, jsonify
 
 load_dotenv()
 
@@ -37,155 +19,18 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-_parser: WebhookParser | None = None
-
-
-def _get_parser() -> WebhookParser:
-    global _parser
-    if _parser is None:
-        secret = os.environ.get("CHANNEL_STOCK_SECRET", "")
-        if not secret:
-            raise RuntimeError("CHANNEL_STOCK_SECRET 環境變數未設定")
-        _parser = WebhookParser(secret)
-    return _parser
-
-
-# ── 路由 ───────────────────────────────────────────────────────────────────────
 
 @app.get("/")
 def index():
-    return "Stock AI Agent ETF Bot is running! 📈", 200
+    return "Stock AI Agent ETF Bot (Push Mode Only) 📈", 200
 
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}, 200
+    return {"status": "ok", "mode": "push_only"}, 200
 
-
-@app.get("/test_push")
-def test_push():
-    """測試推播是否正常（帶入 ?user_id=Uxxxx 驗證）。"""
-    from linebot.v3.messaging import (
-        ApiClient, Configuration, MessagingApi,
-        PushMessageRequest, TextMessage,
-    )
-
-    user_id = request.args.get("user_id", "").strip()
-    if not user_id:
-        return jsonify({"status": "error", "message": "請帶入 user_id，例如 /test_push?user_id=Uxxxx"}), 400
-
-    token = os.environ.get("CHANNEL_STOCK_ACCESS_TOKEN", "")
-    if not token:
-        return jsonify({"status": "error", "message": "CHANNEL_STOCK_ACCESS_TOKEN 環境變數未設定"}), 500
-
-    try:
-        config = Configuration(access_token=token)
-        api = MessagingApi(ApiClient(config))
-        api.push_message(PushMessageRequest(
-            to=user_id,
-            messages=[TextMessage(text="✅ 推播測試成功！Bot 可正常發送訊息。")],
-        ))
-        logger.info("test_push 成功，to=%s", user_id)
-        return jsonify({"status": "ok", "message": f"推播已送出至 {user_id}"}), 200
-    except Exception as exc:
-        logger.exception("test_push 失敗：%s", exc)
-        return jsonify({"status": "error", "message": str(exc)}), 500
-
-
-@app.post("/webhook")
-def webhook():
-    signature = request.headers.get("X-Line-Signature", "")
-    body = request.get_data(as_text=True)
-
-    try:
-        events = _get_parser().parse(body, signature)
-    except InvalidSignatureError:
-        logger.warning("Invalid signature received")
-        abort(400)
-
-    for event in events:
-        if isinstance(event, FollowEvent):
-            threading.Thread(target=_safe_run, args=(handle_follow_event, event), daemon=True).start()
-        elif isinstance(event, UnfollowEvent):
-            threading.Thread(target=_safe_run, args=(handle_unfollow_event, event), daemon=True).start()
-        elif isinstance(event, MessageEvent) and isinstance(event.message, TextMessageContent):
-            threading.Thread(target=_safe_run, args=(handle_message_event, event), daemon=True).start()
-
-    return "OK", 200
-
-
-@app.post("/setup_rich_menu")
-def setup_rich_menu_endpoint():
-    """一次性設定 Rich Menu（需帶 Authorization: Bearer <PUSH_SECRET>）。"""
-    secret = os.environ.get("PUSH_SECRET", "")
-    if secret:
-        auth = request.headers.get("Authorization", "")
-        if auth != f"Bearer {secret}":
-            abort(401)
-    try:
-        from linebot_utils.rich_menu import setup_rich_menu
-        rich_menu_id = setup_rich_menu()
-        return jsonify({"status": "ok", "rich_menu_id": rich_menu_id}), 200
-    except Exception as exc:
-        logger.exception("Rich Menu 設定失敗：%s", exc)
-        return jsonify({"status": "error", "message": str(exc)}), 500
-
-
-@app.post("/reset_rich_menu")
-def reset_rich_menu_endpoint():
-    """刪除所有 Rich Menu（需帶 Authorization: Bearer <PUSH_SECRET>）。"""
-    secret = os.environ.get("PUSH_SECRET", "")
-    if secret:
-        auth = request.headers.get("Authorization", "")
-        if auth != f"Bearer {secret}":
-            abort(401)
-    try:
-        from linebot_utils.rich_menu import delete_all_rich_menus
-        count = delete_all_rich_menus()
-        return jsonify({"status": "ok", "deleted": count}), 200
-    except Exception as exc:
-        logger.exception("Rich Menu 刪除失敗：%s", exc)
-        return jsonify({"status": "error", "message": str(exc)}), 500
-
-
-@app.post("/push")
-def push_trigger():
-    """
-    Render cron job 觸發端點。
-    需帶 Authorization: Bearer <PUSH_SECRET> header。
-    """
-    secret = os.environ.get("PUSH_SECRET", "")
-    if secret:
-        auth = request.headers.get("Authorization", "")
-        if auth != f"Bearer {secret}":
-            abort(401)
-
-    def _do_push():
-        from linebot_utils.line_push import push_dual, push_text
-        try:
-            push_dual()
-        except Exception as exc:
-            logger.exception("排程推播失敗：%s", exc)
-            try:
-                push_text(f"⚠️ ETF AI 推播失敗\n錯誤：{exc}")
-            except Exception:
-                pass
-
-    threading.Thread(target=_do_push, daemon=True).start()
-    return jsonify({"status": "push triggered"}), 202
-
-
-# ── 工具函式 ──────────────────────────────────────────────────────────────────
-
-def _safe_run(fn, event) -> None:
-    try:
-        fn(event)
-    except Exception as exc:
-        logger.exception("處理事件時發生錯誤：%s", exc)
-
-
-# ── 本機開發 ──────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
+    import os
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)

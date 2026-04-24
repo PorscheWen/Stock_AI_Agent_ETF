@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """
-重新設定 Rich Menu（修正字型亂碼）
-執行此腳本會：
-1. 刪除舊的 Rich Menu
-2. 建立新的 Rich Menu（使用修正後的中文字型）
-3. 設定為預設選單
+【已棄用】重新設定 Rich Menu（修正字型亂碼）
+
+⚠️ 注意：本專案已改為 GitHub Actions 推播模式，不再使用 Rich Menu
+此腳本保留僅供參考
 """
 import os
 from dotenv import load_dotenv
