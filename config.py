@@ -1,5 +1,9 @@
 """
 ETF 設定檔 — 定義 0050 與 00631L 的基本資訊
+
+MIS 即時行情（data.fetcher）：
+- 預設 ex_ch 為 tse_{代號}.tw（上市）
+- 上櫃標的可設 "mis_market": "otc"，或完整 "mis_ex_ch": "otc_XXXX.tw"
 """
 
 ETF_CONFIG = {

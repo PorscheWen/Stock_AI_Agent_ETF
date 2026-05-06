@@ -1,16 +1,13 @@
 """
-資料抓取模組 — 從 Yahoo Finance 取得台灣 ETF 歷史資料
+資料抓取模組 — 歷史 K 線自 Yahoo Finance；盤中現價優先證交所 MIS。
 """
 from __future__ import annotations
-
-import time
-from datetime import datetime
-from functools import lru_cache
-from typing import Optional
 
 import numpy as np
 import pandas as pd
 import yfinance as yf
+
+from data.fetcher import get_quote_mis
 
 
 def fetch_etf_data(symbol: str, period: str = "1y") -> pd.DataFrame:
@@ -35,14 +32,17 @@ def fetch_etf_data(symbol: str, period: str = "1y") -> pd.DataFrame:
 
 
 def get_current_price(symbol: str) -> float:
-    """取得最新成交價"""
+    """優先證交所 MIS 即時行情，失敗則改用 Yahoo Finance。"""
+    mis_price = get_quote_mis(symbol)
+    if mis_price > 0:
+        return mis_price
+
     ticker_symbol = symbol if symbol.endswith(".TW") else f"{symbol}.TW"
     try:
         ticker = yf.Ticker(ticker_symbol)
         info = ticker.fast_info
         price = getattr(info, "last_price", None)
         if price is None or np.isnan(price):
-            # fallback: 使用 history
             hist = ticker.history(period="2d")
             if not hist.empty:
                 price = float(hist["Close"].iloc[-1])
