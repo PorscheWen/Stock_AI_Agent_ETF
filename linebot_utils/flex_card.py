@@ -364,6 +364,30 @@ def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
         ],
     } if rec_contents else None
 
+    # ── LLM 盤勢解讀 ─────────────────────────────────────────────────────────
+    llm_text = (analysis.get("llm_commentary") or "").strip()
+    llm_section = None
+    if llm_text:
+        llm_section = {
+            "type": "box",
+            "layout": "vertical",
+            "margin": "md",
+            "backgroundColor": "#E3F2FD",
+            "paddingAll": "10px",
+            "cornerRadius": "8px",
+            "contents": [
+                _section_title("AI 盤勢解讀"),
+                {"type": "separator", "margin": "xs"},
+                {
+                    "type": "text",
+                    "text": llm_text,
+                    "size": "xs",
+                    "color": "#1565C0",
+                    "wrap": True,
+                },
+            ],
+        }
+
     # ── Body ─────────────────────────────────────────────────────────────────
     body_contents = [
         price_row,
@@ -378,6 +402,8 @@ def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
     ]
     if rec_section:
         body_contents.append(rec_section)
+    if llm_section:
+        body_contents.append(llm_section)
 
     body = {
         "type": "box",

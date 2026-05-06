@@ -7,8 +7,6 @@ from __future__ import annotations
 
 import logging
 import os
-
-from dotenv import load_dotenv
 from linebot.v3.messaging import (
     ApiClient,
     Configuration,
@@ -22,11 +20,13 @@ from linebot.v3.messaging import (
 
 from concurrent.futures import ThreadPoolExecutor
 
+from agents.llm_commentary import enrich_analyses_with_llm
 from agents.orchestrator import Orchestrator
 from config import ETF_CONFIG
 from linebot_utils.flex_card import build_etf_carousel, build_etf_flex_card
+from project_env import load_project_env
 
-load_dotenv()
+load_project_env()
 logger = logging.getLogger(__name__)
 
 
@@ -88,10 +88,23 @@ def _run_and_cache(symbol: str) -> dict:
     return analysis
 
 
+def _save_analyses_post_llm(analyses: list[dict]) -> None:
+    """LLM 解讀寫入後再更新快取（含 llm_commentary）。"""
+    try:
+        from data.db import save_analysis
+        for a in analyses:
+            save_analysis(a["symbol"], a)
+        logger.info("[Cache] 已更新 %d 筆含 LLM 解讀之快取", len(analyses))
+    except Exception as exc:
+        logger.warning("[Cache] LLM 後無法更新快取：%s", exc)
+
+
 def push_single(symbol: str) -> None:
     """分析單支 ETF 並推播給所有訂閱者。"""
     logger.info("[Push] 分析 %s ...", symbol)
     analysis = _run_and_cache(symbol)
+    enrich_analyses_with_llm([analysis])
+    _save_analyses_post_llm([analysis])
     payload = build_etf_flex_card(analysis)
 
     user_ids = _get_user_ids()
@@ -113,6 +126,8 @@ def push_dual() -> None:
     with ThreadPoolExecutor(max_workers=len(symbols)) as ex:
         analyses = list(ex.map(_run_and_cache, symbols))
 
+    enrich_analyses_with_llm(analyses)
+    _save_analyses_post_llm(analyses)
     carousel = build_etf_carousel(*analyses)
 
     user_ids = _get_user_ids()

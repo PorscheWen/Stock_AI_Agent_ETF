@@ -1,9 +1,8 @@
 """
 主程式進入點（Push 模式，不需要 Flask / ngrok）
 執行方式：
-  python main.py              # 立即推播雙 ETF（0050 + 00631L）
-  python main.py --etf 0050   # 只推播 0050
-  python main.py --etf 00631L # 只推播 00631L
+  python main.py              # 立即推播全部設定內 ETF（Carousel）
+  python main.py --etf 0050   # 只推播單檔
   python main.py --schedule   # 啟動排程，台灣時間 08:00 週一～週五自動推播
 """
 from __future__ import annotations
@@ -14,6 +13,11 @@ import logging
 import sys
 
 import pytz
+
+from project_env import load_project_env
+
+# 可選：設 GOOGLE_DRIVE_DOTENV_FILE_ID 或 URL 則先從雲端拉取 .env；否則讀本機專案根 .env
+load_project_env()
 from apscheduler.schedulers.blocking import BlockingScheduler
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")

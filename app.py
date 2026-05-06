@@ -6,10 +6,12 @@
 from __future__ import annotations
 
 import logging
-from dotenv import load_dotenv
+
 from flask import Flask, jsonify
 
-load_dotenv()
+from project_env import load_project_env
+
+load_project_env()
 
 logging.basicConfig(
     level=logging.INFO,
