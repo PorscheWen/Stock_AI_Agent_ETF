@@ -364,6 +364,130 @@ def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
         ],
     } if rec_contents else None
 
+    # ── 精確操作建議（AdviceAgent） ───────────────────────────────────────────
+    advice = analysis.get("advice") or {}
+    advice_section = None
+    if advice:
+        conf_color   = advice.get("confidence_color", "#E65100")
+        conf_label   = advice.get("confidence_label", "中等信心")
+        conf_pct     = advice.get("confidence", 0)
+        consensus    = advice.get("consensus", "")
+        position_pct = advice.get("position_pct", "—")
+        entry_advice = advice.get("entry_advice", "")
+        points       = advice.get("points", [])
+        risk_warning = advice.get("risk_warning", "")
+
+        # 標題列：「🎯 精確操作建議」+「● 高信心 82%」
+        advice_header_row = {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+                _section_title("🎯 精確操作建議"),
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "flex": 0,
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "●",
+                            "color": conf_color,
+                            "size": "xs",
+                            "flex": 0,
+                        },
+                        {
+                            "type": "text",
+                            "text": f" {conf_label} {conf_pct}%",
+                            "color": conf_color,
+                            "size": "xs",
+                            "weight": "bold",
+                            "flex": 0,
+                        },
+                    ],
+                },
+            ],
+        }
+
+        # 共識 + 建議倉位
+        meta_row = {
+            "type": "box",
+            "layout": "horizontal",
+            "margin": "sm",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": consensus,
+                    "size": "xs",
+                    "color": conf_color,
+                    "weight": "bold",
+                    "flex": 0,
+                },
+                {
+                    "type": "text",
+                    "text": f"  建議倉位 {position_pct}",
+                    "size": "xs",
+                    "color": "#555555",
+                    "flex": 0,
+                },
+            ],
+        }
+
+        # 進場建議
+        entry_row = {
+            "type": "text",
+            "text": entry_advice,
+            "size": "xs",
+            "color": "#333333",
+            "wrap": True,
+            "margin": "xs",
+        }
+
+        # 關鍵重點列表
+        point_rows = [
+            {
+                "type": "text",
+                "text": f"• {pt}",
+                "size": "xxs",
+                "color": "#555555",
+                "wrap": True,
+                "margin": "xs",
+            }
+            for pt in points
+        ]
+
+        # 風險警示（有則顯示）
+        risk_rows = []
+        if risk_warning:
+            risk_rows = [
+                {"type": "separator", "margin": "sm"},
+                {
+                    "type": "text",
+                    "text": risk_warning,
+                    "size": "xs",
+                    "color": "#C62828",
+                    "wrap": True,
+                    "weight": "bold",
+                    "margin": "sm",
+                },
+            ]
+
+        advice_section = {
+            "type": "box",
+            "layout": "vertical",
+            "margin": "md",
+            "backgroundColor": "#F1F8E9",
+            "paddingAll": "10px",
+            "cornerRadius": "8px",
+            "contents": [
+                advice_header_row,
+                {"type": "separator", "margin": "xs"},
+                meta_row,
+                entry_row,
+                *point_rows,
+                *risk_rows,
+            ],
+        }
+
     # ── LLM 盤勢解讀 ─────────────────────────────────────────────────────────
     llm_text = (analysis.get("llm_commentary") or "").strip()
     llm_section = None
@@ -402,6 +526,8 @@ def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
     ]
     if rec_section:
         body_contents.append(rec_section)
+    if advice_section:
+        body_contents.append(advice_section)
     if llm_section:
         body_contents.append(llm_section)
 

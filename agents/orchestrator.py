@@ -13,6 +13,7 @@ from agents.technical_agent import TechnicalAgent
 from agents.volume_agent import VolumeAgent
 from agents.trend_agent import TrendAgent
 from agents.risk_agent import RiskAgent
+from agents.advice_agent import AdviceAgent
 from config import AGENT_MAX_SCORES, DECISION_THRESHOLDS, ETF_CONFIG, MAX_WEIGHTED_SCORE
 from data import fetch_etf_data, get_current_price
 
@@ -97,7 +98,7 @@ class Orchestrator:
             is_leveraged=self.etf_info.get("type") == "leveraged",
         )
 
-        return {
+        result = {
             "symbol": self.symbol,
             "etf_info": self.etf_info,
             "latest_price": latest_price,
@@ -111,6 +112,11 @@ class Orchestrator:
             "agent_results": agent_results,
             "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
         }
+
+        # 操作建議 Agent：彙整所有 Agent 結果，產生精確建議與信心顏色
+        AdviceAgent.generate(result)
+
+        return result
 
     @staticmethod
     def _generate_recommendation(
