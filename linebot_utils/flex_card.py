@@ -512,8 +512,46 @@ def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
             ],
         }
 
+    # ── 價格跌幅警示橫幅 ──────────────────────────────────────────────────────
+    price_alert_level = analysis.get("price_alert_level", "none")
+    price_alerts_data  = analysis.get("price_alerts", [])
+    alert_banner = None
+    if price_alert_level in ("critical", "warning") and price_alerts_data:
+        if price_alert_level == "critical":
+            banner_bg   = "#B71C1C"
+            banner_text = "  ".join(
+                f"{a['label']} {a['value']}" for a in price_alerts_data
+                if "critical" in a.get("label", "") or "🚨" in a.get("label", "")
+            ) or price_alerts_data[0]["value"]
+        else:
+            banner_bg   = "#E65100"
+            banner_text = "  ".join(
+                f"{a['label']} {a['value']}" for a in price_alerts_data
+            )
+        alert_banner = {
+            "type": "box",
+            "layout": "vertical",
+            "backgroundColor": banner_bg,
+            "paddingAll": "10px",
+            "cornerRadius": "6px",
+            "margin": "md",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": banner_text,
+                    "color": "#FFFFFF",
+                    "size": "xs",
+                    "weight": "bold",
+                    "wrap": True,
+                }
+            ],
+        }
+
     # ── Body ─────────────────────────────────────────────────────────────────
-    body_contents = [
+    body_contents = []
+    if alert_banner:
+        body_contents.append(alert_banner)
+    body_contents += [
         price_row,
         {"type": "separator", "margin": "md"},
         score_row,
@@ -568,9 +606,15 @@ def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
         },
     }
 
+    alert_prefix = ""
+    if price_alert_level == "critical":
+        alert_prefix = "🚨 急跌警示！"
+    elif price_alert_level == "warning":
+        alert_prefix = "⚠️ 下跌警示！"
+
     return {
         "type": "flex",
-        "altText": f"{etf_info['name']}({symbol}) AI分析：{final_action}，信心度{confidence}%，現價NT${price:.2f}",
+        "altText": f"{alert_prefix}{etf_info['name']}({symbol}) AI分析：{final_action}，信心度{confidence}%，現價NT${price:.2f}",
         "contents": bubble,
     }
 

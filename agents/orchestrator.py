@@ -113,6 +113,19 @@ class Orchestrator:
             "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
         }
 
+        # 提取價格跌幅警示（從 risk_agent details）
+        risk_details_full = next(
+            (r["details"] for r in agent_results if "price_alert_level" in r.get("details", {})),
+            {},
+        )
+        price_alert_level = risk_details_full.get("price_alert_level", "none")
+        price_alerts = risk_details_full.get("price_alerts", [])
+        result["price_alert_level"] = price_alert_level
+        result["price_alerts"] = [
+            {"label": a["label"], "value": a["value"]}
+            for a in price_alerts
+        ]
+
         # 操作建議 Agent：彙整所有 Agent 結果，產生精確建議與信心顏色
         AdviceAgent.generate(result)
 

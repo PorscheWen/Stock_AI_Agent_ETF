@@ -93,7 +93,22 @@ class RiskAgent(BaseAgent):
                     "bullish": None,
                 })
 
+        # --- 價格跌幅警示（1日 / 5日）---
+        price_alerts = self._price_drop_alerts(close)
+        for alert in price_alerts:
+            signals.append(alert)
+            score -= alert.get("_score_penalty", 0)
+
         action = self._score_to_action(score)
+
+        # 取最高警示等級（critical > warning > none）
+        alert_level = "none"
+        for a in price_alerts:
+            if a.get("_alert_level") == "critical":
+                alert_level = "critical"
+                break
+            if a.get("_alert_level") == "warning":
+                alert_level = "warning"
 
         return {
             "agent": self.name,
@@ -106,8 +121,47 @@ class RiskAgent(BaseAgent):
                 "max_drawdown_pct": self._safe_float(drawdown),
                 "annual_volatility_pct": self._safe_float(annual_vol),
                 "is_leveraged": self._is_leveraged,
+                "price_alerts": price_alerts,
+                "price_alert_level": alert_level,
             },
         }
+
+    @staticmethod
+    def _price_drop_alerts(close: pd.Series) -> list[dict]:
+        """計算 1日 / 5日 跌幅，達到 5% 或 10% 時產生警示。"""
+        alerts = []
+
+        def _check(pct: float, period_label: str) -> None:
+            if pct >= 10:
+                alerts.append({
+                    "label": f"🚨 {period_label}急跌",
+                    "value": f"跌幅 {pct:.1f}% — 緊急警示，注意停損！",
+                    "bullish": False,
+                    "_alert_level": "critical",
+                    "_score_penalty": 2,
+                })
+            elif pct >= 5:
+                alerts.append({
+                    "label": f"⚠️ {period_label}下跌",
+                    "value": f"跌幅 {pct:.1f}% — 警示，建議觀察支撐",
+                    "bullish": False,
+                    "_alert_level": "warning",
+                    "_score_penalty": 1,
+                })
+
+        # 1日跌幅
+        if len(close) >= 2:
+            daily_chg = (close.iloc[-1] - close.iloc[-2]) / close.iloc[-2] * 100
+            if daily_chg < 0:
+                _check(abs(daily_chg), "單日")
+
+        # 5日跌幅（約一週）
+        if len(close) >= 6:
+            week_chg = (close.iloc[-1] - close.iloc[-6]) / close.iloc[-6] * 100
+            if week_chg < 0:
+                _check(abs(week_chg), "5日")
+
+        return alerts
 
     @staticmethod
     def _atr(df: pd.DataFrame, period: int = 14) -> pd.Series:
