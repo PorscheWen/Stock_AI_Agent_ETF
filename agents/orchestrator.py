@@ -68,7 +68,7 @@ class Orchestrator:
 
         final_action = self._score_to_final_action(total_score)
 
-        # 信心度：正規化總分佔最大加權總分的比例
+        # 準確度：正規化總分佔最大加權總分的比例
         confidence = round(min(abs(total_score) / MAX_WEIGHTED_SCORE * 100, 100))
 
         # 即時市價（用於顯示與停損停利計算）
@@ -126,7 +126,7 @@ class Orchestrator:
             for a in price_alerts
         ]
 
-        # 操作建議 Agent：彙整所有 Agent 結果，產生精確建議與信心顏色
+        # 操作建議 Agent：彙整所有 Agent 結果，產生精確建議與準確度顏色
         AdviceAgent.generate(result)
 
         return result
@@ -167,7 +167,7 @@ class Orchestrator:
         # 依操作方向決定建議內容
         if final_action == "強力買入":
             summary = f"技術、量能、趨勢全面看多（{bullish_count} 項多頭訊號），積極做多訊號明確。"
-            entry   = f"可於現價 NT${latest_price:.2f} 附近進場，信心度 {confidence}%。"
+            entry   = f"可於現價 NT${latest_price:.2f} 附近進場，準確度 {confidence}%。"
             position = "建議倉位 50～70%，可一次進場或分兩批布局。"
 
         elif final_action == "買入":

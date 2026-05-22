@@ -101,7 +101,7 @@ def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
                     },
                     {
                         "type": "text",
-                        "text": f"信心 {confidence}%",
+                        "text": f"準確度 {confidence}%",
                         "color": "#FFFFFFcc",
                         "size": "xs",
                         "align": "end",
@@ -369,7 +369,7 @@ def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
     advice_section = None
     if advice:
         conf_color   = advice.get("confidence_color", "#E65100")
-        conf_label   = advice.get("confidence_label", "中等信心")
+        conf_label   = advice.get("confidence_label", "中等準確度")
         conf_pct     = advice.get("confidence", 0)
         consensus    = advice.get("consensus", "")
         position_pct = advice.get("position_pct", "—")
@@ -377,7 +377,7 @@ def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
         points       = advice.get("points", [])
         risk_warning = advice.get("risk_warning", "")
 
-        # 標題列：「🎯 精確操作建議」+「● 高信心 82%」
+        # 標題列：「🎯 精確操作建議」+「● 高準確度 82%」
         advice_header_row = {
             "type": "box",
             "layout": "horizontal",
@@ -614,7 +614,7 @@ def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
 
     return {
         "type": "flex",
-        "altText": f"{alert_prefix}{etf_info['name']}({symbol}) AI分析：{final_action}，信心度{confidence}%，現價NT${price:.2f}",
+        "altText": f"{alert_prefix}{etf_info['name']}({symbol}) AI分析：{final_action}，準確度{confidence}%，現價NT${price:.2f}",
         "contents": bubble,
     }
 
