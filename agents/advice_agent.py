@@ -1,17 +1,17 @@
 """
-操作建議 Agent — 彙整所有 Agent 結果，依信心度輸出精確操作建議與顏色標示。
+操作建議 Agent — 彙整所有 Agent 結果，依準確度輸出精確操作建議與顏色標示。
 
-信心度顏色規則：
-  ≥ 60%  → 綠色（高信心）
-  < 10%  → 紅色（低信心）
-  其他   → 橘色（中等信心）
+準確度顏色規則：
+  ≥ 60%  → 綠色（高準確度）
+  < 10%  → 紅色（低準確度）
+  其他   → 橘色（中等準確度）
 """
 from __future__ import annotations
 
 from typing import Any
 
 
-# 信心度閾值
+# 準確度閾值
 _CONFIDENCE_HIGH = 60
 _CONFIDENCE_LOW  = 10
 
@@ -25,7 +25,7 @@ _BEARISH_ACTIONS = {"強力賣出", "賣出"}
 
 
 def confidence_color(confidence: int) -> str:
-    """依信心度回傳 hex 顏色：≥60% 綠、<10% 紅、其他橘。"""
+    """依準確度回傳 hex 顏色：≥60% 綠、<10% 紅、其他橘。"""
     if confidence >= _CONFIDENCE_HIGH:
         return _COLOR_HIGH
     if confidence < _CONFIDENCE_LOW:
@@ -34,12 +34,12 @@ def confidence_color(confidence: int) -> str:
 
 
 def confidence_label(confidence: int) -> str:
-    """依信心度回傳文字標籤。"""
+    """依準確度回傳文字標籤。"""
     if confidence >= _CONFIDENCE_HIGH:
-        return "高信心"
+        return "高準確度"
     if confidence < _CONFIDENCE_LOW:
-        return "低信心"
-    return "中等信心"
+        return "低準確度"
+    return "中等準確度"
 
 
 class AdviceAgent:
@@ -132,7 +132,7 @@ class AdviceAgent:
         elif final_action in _BULLISH_ACTIONS and conf >= _CONFIDENCE_LOW:
             position_pct = "10–30%"
             entry_advice = (
-                f"信心度中等（{conf}%），小倉位試水溫，"
+                f"準確度中等（{conf}%），小倉位試水溫，"
                 "等方向明確確認後再逐步加碼。"
             )
         elif final_action in _BEARISH_ACTIONS:
@@ -141,7 +141,7 @@ class AdviceAgent:
         elif conf < _CONFIDENCE_LOW:
             position_pct = "0%"
             entry_advice = (
-                f"信心度過低（{conf}%），訊號不足以支撐進場判斷，"
+                f"準確度過低（{conf}%），訊號不足以支撐進場判斷，"
                 "建議場外等待更清晰訊號。"
             )
         else:
@@ -164,11 +164,11 @@ class AdviceAgent:
             else:
                 risk_warning = "⚠️ 槓桿 ETF 非多頭趨勢不宜介入，請考慮以 0050 替代。"
         elif conf < _CONFIDENCE_LOW:
-            risk_warning = "⚠️ 信心不足，市場方向不明，保守應對為宜。"
+            risk_warning = "⚠️ 準確度不足，市場方向不明，保守應對為宜。"
         elif consensus == "訊號分歧":
             risk_warning = "⚠️ 多空訊號分歧，追高追低風險較高，建議等待共識成形。"
         elif final_action in _BEARISH_ACTIONS and conf >= _CONFIDENCE_HIGH:
-            risk_warning = "⚠️ 空頭訊號高信心，現有多頭部位宜盡速減碼或出場。"
+            risk_warning = "⚠️ 空頭訊號高準確度，現有多頭部位宜盡速減碼或出場。"
 
         # ── 組合 advice 字典 ───────────────────────────────────────────────────
         advice: dict[str, Any] = {

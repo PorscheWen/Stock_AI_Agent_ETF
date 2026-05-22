@@ -114,7 +114,7 @@ def push_single(symbol: str) -> None:
             contents=FlexContainer.from_dict(payload["contents"]),
         )
     ])
-    logger.info("[Push] %s 推播成功（%s，信心 %d%%，%d 人）",
+    logger.info("[Push] %s 推播成功（%s，準確度 %d%%，%d 人）",
                 symbol, analysis["final_action"], analysis["confidence"], len(user_ids))
 
 
