@@ -25,11 +25,12 @@ _SIGNAL_COLORS = {
 }
 
 
-def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
+def build_etf_flex_card(analysis: dict[str, Any], compact: bool = False) -> dict:
     symbol        = analysis["symbol"]
     etf_info      = analysis["etf_info"]
     price         = analysis["latest_price"]
     date_str      = analysis["latest_date"]
+    data_stale    = analysis.get("data_stale", False)
     final_action  = analysis["final_action"]
     total_score   = analysis["total_score"]
     confidence    = analysis["confidence"]
@@ -55,6 +56,28 @@ def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
                 "flex": 5,
                 "contents": [
                     {
+                        "type": "text",
+                        "text": f"NT${price:.2f}",
+                        "color": "#FFFFFF",
+                        "size": "xl",
+                        "weight": "bold",
+                    },
+                    {
+                        "type": "text",
+                        "text": date_str,
+                        "color": "#FFFFFFaa",
+                        "size": "xxs",
+                        "margin": "xs",
+                    },
+                ],
+            },
+            {
+                "type": "box",
+                "layout": "vertical",
+                "flex": 3,
+                "alignItems": "flex-end",
+                "contents": [
+                    {
                         "type": "box",
                         "layout": "horizontal",
                         "contents": [
@@ -77,41 +100,18 @@ def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
                     },
                     {
                         "type": "text",
-                        "text": etf_info["description"],
-                        "color": "#FFFFFFaa",
-                        "size": "xxs",
-                        "margin": "xs",
-                        "wrap": True,
-                    },
-                ],
-            },
-            {
-                "type": "box",
-                "layout": "vertical",
-                "flex": 3,
-                "alignItems": "flex-end",
-                "contents": [
-                    {
-                        "type": "text",
                         "text": f"{action_meta['emoji']} {final_action}",
                         "color": "#FFFFFF",
                         "size": "sm",
                         "weight": "bold",
                         "align": "end",
-                    },
-                    {
-                        "type": "text",
-                        "text": f"信心 {confidence}%",
-                        "color": "#FFFFFFcc",
-                        "size": "xs",
-                        "align": "end",
                         "margin": "xs",
                     },
                     {
                         "type": "text",
-                        "text": etf_info.get("risk_level", "-") + " 風險",
-                        "color": "#FFFFFFaa",
-                        "size": "xxs",
+                        "text": f"準確率 {confidence}%",
+                        "color": "#FFFFFFcc",
+                        "size": "xs",
                         "align": "end",
                         "margin": "xs",
                     },
@@ -199,6 +199,14 @@ def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
     }
 
     # ── Agent 判斷 2×2 橫排格 ────────────────────────────────────────────────
+    # 根據準確率設定背景色：高準確率（>=70%）紅色、中準確率（40-69%）灰色、低準確率（<40%）綠色
+    if confidence >= 70:
+        tab_bg_color = "#FFEBEE"  # 紅色系（看多）
+    elif confidence >= 40:
+        tab_bg_color = "#F5F5F5"  # 灰色系（中性）
+    else:
+        tab_bg_color = "#E8F5E9"  # 綠色系（看空）
+    
     agent_cells = []
     for r in agent_results:
         action_color = next(
@@ -209,7 +217,7 @@ def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
             "type": "box",
             "layout": "vertical",
             "flex": 1,
-            "backgroundColor": "#F8F8F8",
+            "backgroundColor": tab_bg_color,
             "cornerRadius": "6px",
             "paddingAll": "8px",
             "contents": [
@@ -255,10 +263,11 @@ def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
 
     # ── 訊號左右雙欄（技術 + 量能 | 趨勢 + 風險） ───────────────────────────
     _AGENT_TITLES = ["📊 技術", "📦 量能", "🔭 趨勢", "⚠️ 風險"]
+    signal_limit = 2 if compact else 3  # compact 模式減少訊號數量
     signal_col_groups = []
     for r, title in zip(agent_results, _AGENT_TITLES):
         rows = []
-        for sig in r["signals"][:3]:
+        for sig in r["signals"][:signal_limit]:
             color = _SIGNAL_COLORS.get(sig["bullish"], "#546E7A")
             rows.append({
                 "type": "box",
@@ -327,12 +336,15 @@ def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
         ],
     }
 
-    # ── 操作建議（compact 單行） ──────────────────────────────────────────────
+    # ── 操作建議（合併所有建議資訊） ──────────────────────────────────────────────
     rec_contents = []
     if recommendation:
-        summary = recommendation.get("summary", "")
-        entry   = recommendation.get("entry", "")
-        note    = recommendation.get("note", "")
+        summary  = recommendation.get("summary", "")
+        entry    = recommendation.get("entry", "")
+        position = recommendation.get("position", "")
+        exit_txt = recommendation.get("exit", "")
+        note     = recommendation.get("note", "")
+        
         if summary:
             rec_contents.append({
                 "type": "text", "text": summary,
@@ -341,6 +353,16 @@ def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
         if entry:
             rec_contents.append({
                 "type": "text", "text": entry,
+                "size": "xs", "color": "#555555", "wrap": True, "margin": "xs",
+            })
+        if position:
+            rec_contents.append({
+                "type": "text", "text": position,
+                "size": "xs", "color": "#555555", "wrap": True, "margin": "xs",
+            })
+        if exit_txt:
+            rec_contents.append({
+                "type": "text", "text": exit_txt,
                 "size": "xs", "color": "#555555", "wrap": True, "margin": "xs",
             })
         if note:
@@ -577,21 +599,44 @@ def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
     }
 
     # ── Footer ────────────────────────────────────────────────────────────────
+    footer_contents = [
+        {
+            "type": "text",
+            "text": f"📊 資料日期: {date_str}　⏱ 分析時間: {generated_at}",
+            "size": "xxs",
+            "color": "#666666",
+            "align": "center",
+            "wrap": True,
+        }
+    ]
+    
+    # 如果資料過舊，顯示警告
+    if data_stale:
+        footer_contents.append({
+            "type": "text",
+            "text": "⚠️ 資料可能未更新，請確認市場狀態",
+            "size": "xxs",
+            "color": "#FF6B00",
+            "align": "center",
+            "margin": "xs",
+            "weight": "bold",
+        })
+    
+    footer_contents.append({
+        "type": "text",
+        "text": "⚠️ 僅供參考，非投資建議",
+        "size": "xxs",
+        "color": "#AAAAAA",
+        "align": "center",
+        "margin": "xs",
+    })
+    
     footer = {
         "type": "box",
         "layout": "vertical",
         "backgroundColor": "#F5F5F5",
         "paddingAll": "10px",
-        "contents": [
-            {
-                "type": "text",
-                "text": f"⏱ {generated_at}　⚠️ 僅供參考，非投資建議",
-                "size": "xxs",
-                "color": "#AAAAAA",
-                "align": "center",
-                "wrap": True,
-            },
-        ],
+        "contents": footer_contents,
     }
 
     bubble = {
@@ -614,14 +659,19 @@ def build_etf_flex_card(analysis: dict[str, Any]) -> dict:
 
     return {
         "type": "flex",
-        "altText": f"{alert_prefix}{etf_info['name']}({symbol}) AI分析：{final_action}，信心度{confidence}%，現價NT${price:.2f}",
+        "altText": f"{alert_prefix}{etf_info['name']}({symbol}) AI分析：{final_action}，準確率{confidence}%，現價NT${price:.2f}",
         "contents": bubble,
     }
 
 
-def build_etf_carousel(*analyses: dict) -> dict:
-    """將任意數量 ETF 分析結果組合為 Carousel（左右滑動）。"""
-    bubbles = [build_etf_flex_card(a)["contents"] for a in analyses]
+def build_etf_carousel(*analyses: dict, compact: bool = False) -> dict:
+    """將任意數量 ETF 分析結果組合為 Carousel（左右滑動）。
+    
+    Args:
+        *analyses: ETF 分析結果
+        compact: True 時使用精簡模式減少訊號數量，降低 JSON 大小
+    """
+    bubbles = [build_etf_flex_card(a, compact=compact)["contents"] for a in analyses]
     names = "、".join(a["symbol"] for a in analyses)
     return {
         "type": "flex",

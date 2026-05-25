@@ -79,7 +79,7 @@ DECISION_THRESHOLDS = {
 # 各 Agent 正規化基準（理論最大正分）
 AGENT_MAX_SCORES = [7.0, 5.0, 7.0, 3.0]  # tech, vol, trend, risk
 
-# 加權正規化後的最大總分（用於信心度計算）
+# 加權正規化後的最大總分（用於準確率計算）
 MAX_WEIGHTED_SCORE = 3.5
 
 ACTION_LABELS = {

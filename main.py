@@ -52,26 +52,26 @@ def main() -> None:
     parser.add_argument("--etf", choices=list(ETF_CONFIG.keys()),
                         help="指定單支 ETF；不填則推播全部")
     parser.add_argument("--schedule", action="store_true",
-                        help="啟動排程（台灣時間週一~週五 08:00 自動推播）")
+                        help="啟動排程（台灣時間週一~週五 14:30 收盤後自動推播）")
     args = parser.parse_args()
 
     if args.schedule:
         scheduler = BlockingScheduler(timezone=TZ_TAIPEI)
 
-        # 週一～週五台灣時間 08:00 推播
+        # 週一～週五台灣時間 14:30 收盤後推播
         scheduler.add_job(
             _run_push,
             trigger="cron",
             day_of_week="mon-fri",
-            hour=8,
-            minute=0,
+            hour=14,
+            minute=30,
             kwargs={"etf": args.etf},
-            id="etf_morning_push",
-            name="ETF 早盤前分析推播",
+            id="etf_afternoon_push",
+            name="ETF 收盤後分析推播",
             misfire_grace_time=300,  # 最多容忍遲發 5 分鐘
         )
 
-        logger.info("⏰ 排程模式啟動 — 台灣時間週一至週五 08:00 自動推播")
+        logger.info("⏰ 排程模式啟動 — 台灣時間週一至週五 14:30 收盤後自動推播")
 
         # 啟動時立即推播一次
         _run_push(args.etf)

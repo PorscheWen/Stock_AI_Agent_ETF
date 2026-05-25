@@ -68,7 +68,7 @@ class Orchestrator:
 
         final_action = self._score_to_final_action(total_score)
 
-        # 信心度：正規化總分佔最大加權總分的比例
+        # 準確率：正規化總分佔最大加權總分的比例
         confidence = round(min(abs(total_score) / MAX_WEIGHTED_SCORE * 100, 100))
 
         # 即時市價（用於顯示與停損停利計算）
@@ -78,6 +78,13 @@ class Orchestrator:
 
         latest_date = df.index[-1]
         latest_date_str = latest_date.strftime("%Y/%m/%d") if hasattr(latest_date, "strftime") else str(latest_date)
+        
+        # 檢查資料新鮮度（如果距今超過 3 個日曆天，標記為過期）
+        from datetime import datetime as dt
+        import pandas as pd
+        now = pd.Timestamp.now(tz='Asia/Taipei').tz_localize(None)
+        days_old = (now - latest_date).days if hasattr(latest_date, 'to_pydatetime') else 0
+        data_stale = days_old > 3
 
         # ATR 停損/停利建議（1.5 ATR 止損，2 ATR 停利），基於即時市價
         risk_details = next(
@@ -103,6 +110,7 @@ class Orchestrator:
             "etf_info": self.etf_info,
             "latest_price": latest_price,
             "latest_date": latest_date_str,
+            "data_stale": data_stale,
             "total_score": round(total_score, 2),
             "final_action": final_action,
             "confidence": confidence,
@@ -167,7 +175,7 @@ class Orchestrator:
         # 依操作方向決定建議內容
         if final_action == "強力買入":
             summary = f"技術、量能、趨勢全面看多（{bullish_count} 項多頭訊號），積極做多訊號明確。"
-            entry   = f"可於現價 NT${latest_price:.2f} 附近進場，信心度 {confidence}%。"
+            entry   = f"可於現價 NT${latest_price:.2f} 附近進場，準確率 {confidence}%。"
             position = "建議倉位 50～70%，可一次進場或分兩批布局。"
 
         elif final_action == "買入":

@@ -29,7 +29,7 @@ Orchestrator（並行呼叫 4 個 Agent）
 ## GitHub Actions 排程
 
 - Workflow：`.github/workflows/morning_push.yml`
-- 執行時間：週一～週五 **台灣時間 08:00**（UTC `0 0 * * 1-5`）
+- 執行時間：週一～週五 **台灣時間 14:30**（UTC `30 6 * * 1-5`）**收盤後執行**
 - Python：3.12
 - 支援手動觸發：`workflow_dispatch`
 

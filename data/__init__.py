@@ -26,6 +26,16 @@ def fetch_etf_data(symbol: str, period: str = "1y") -> pd.DataFrame:
         # 移除重複欄位（MultiIndex 展平後可能出現）
         df = df.loc[:, ~df.columns.duplicated()]
         df.dropna(subset=["Close", "Volume"], inplace=True)
+        
+        # 資料新鮮度檢查：如果最新資料超過 5 個日曆天，發出警告
+        if not df.empty:
+            latest_date = df.index[-1]
+            now = pd.Timestamp.now(tz='Asia/Taipei').tz_localize(None)
+            days_old = (now - latest_date).days
+            if days_old > 5:
+                import logging
+                logging.warning(f"⚠️ {symbol} 資料可能過期：最新日期 {latest_date.date()}, 距今 {days_old} 天")
+        
         return df
     except Exception as exc:
         raise RuntimeError(f"取得 {symbol} 資料失敗：{exc}") from exc
