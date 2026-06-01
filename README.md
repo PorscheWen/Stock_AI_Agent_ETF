@@ -1,6 +1,26 @@
 # Stock_AI_Agent_ETF
 
-台灣 ETF 多 Agent AI 買賣判斷系統，支援 **0050**（元大台灣50）與 **00631L**（元大台灣50正2）。每日收盤後透過 GitHub Actions 自動分析並推播 LINE，採用 Push 模式，無需 Flask 或 ngrok。
+台灣 ETF **多 Agent 規則式指標**買賣判斷系統：以歷史 K 線與技術／量能／趨勢／風險訊號加權彙整，每日盤前透過 GitHub Actions 自動分析並 **LINE Push** 推播，無需 Webhook、ngrok。
+
+## 支援 ETF（`config.ETF_CONFIG`）
+
+| 代號 | 說明 |
+|------|------|
+| **0050** | 元大台灣50 |
+| **00631L** | 元大台灣50正2（槓桿，風險 Agent 另有警示） |
+| **009816** | 凱基台灣TOP50 |
+| **00981A** | 統一台灣成長主動 ETF |
+
+`python main.py` 會分析 **全部** 上述標的，並以 **Carousel** 一則 Flex 推播（4 張卡片可左右滑動）。`--etf` 可指定單一代號。
+
+## 資料來源
+
+| 用途 | 來源 |
+|------|------|
+| 歷史 OHLCV（指標計算） | Yahoo Finance（`yfinance`） |
+| 卡片顯示之現價、停損停利參考 | 優先 [證交所 MIS](https://mis.twse.com.tw/) 即時行情，失敗則回退 Yahoo |
+
+上櫃標的可在 `config.py` 為該 ETF 設定 `mis_market: "otc"` 或 `mis_ex_ch`（見檔內註解）。
 
 ## 架構
 
@@ -23,7 +43,8 @@ MA/RSI/MACD   OBV/量比       動能/突破       ATR/回撤
 | 量能分析 Agent | OBV、成交量比、量價配合 |
 | 趨勢動能 Agent | 52週位置、5/20日報酬、突破偵測 |
 | 風險評估 Agent | ATR 波動率、最大回撤、槓桿 ETF 耗損警示 |
-| LINE Push 推播 | 雙 ETF Flex Message 卡片，可左右滑動比較 |
+| LINE Push 推播 | 多檔 ETF Flex Carousel（左右滑動）；單檔為單張 Flex |
+| AI 盤勢解讀 | 選用 **Anthropic Claude**：依四 Agent 結果產生繁中簡評（見 `agents/llm_commentary.py`） |
 
 ## GitHub Actions 自動排程
 
@@ -50,7 +71,7 @@ pip install -r requirements.txt
 cp .env.example .env
 # 填入 CHANNEL_STOCK_SECRET、CHANNEL_STOCK_ACCESS_TOKEN、CHANNEL_STOCK_USER_ID
 
-# 3. 立即推播雙 ETF
+# 3. 立即推播全部 ETF（Carousel 左右滑動）
 python main.py
 
 # 4. 只推播單支 ETF

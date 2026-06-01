@@ -1,7 +1,7 @@
 """
 主程式進入點（Push 模式，不需要 Flask / ngrok）
 執行方式：
-  python main.py              # 立即推播全部設定內 ETF（Carousel）
+  python main.py              # 立即推播全部設定內 ETF（Carousel 左右滑動）
   python main.py --etf 0050   # 只推播單檔
   python main.py --schedule   # 啟動排程，台灣時間 08:00 週一～週五自動推播
 """

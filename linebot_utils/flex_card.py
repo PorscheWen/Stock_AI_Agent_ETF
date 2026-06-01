@@ -1,6 +1,7 @@
 """
 Flex Message 卡片產生器 — 左右橫排圖卡版
 bubble size: mega，Agent 判斷 2×2 格、訊號左右雙欄排列。
+多支 ETF 時以 Carousel 左右滑動卡片呈現（每支一張 mega bubble）。
 """
 from __future__ import annotations
 
@@ -25,7 +26,7 @@ _SIGNAL_COLORS = {
 }
 
 
-def build_etf_flex_card(analysis: dict[str, Any], compact: bool = False) -> dict:
+def _build_etf_bubble(analysis: dict[str, Any], compact: bool = False) -> dict:
     symbol        = analysis["symbol"]
     etf_info      = analysis["etf_info"]
     price         = analysis["latest_price"]
@@ -651,31 +652,64 @@ def build_etf_flex_card(analysis: dict[str, Any], compact: bool = False) -> dict
         },
     }
 
-    alert_prefix = ""
-    if price_alert_level == "critical":
-        alert_prefix = "🚨 急跌警示！"
-    elif price_alert_level == "warning":
-        alert_prefix = "⚠️ 下跌警示！"
+    return bubble
 
+
+def _etf_alert_prefix(analysis: dict[str, Any]) -> str:
+    level = analysis.get("price_alert_level", "none")
+    if level == "critical":
+        return "🚨 急跌警示！"
+    if level == "warning":
+        return "⚠️ 下跌警示！"
+    return ""
+
+
+def _etf_alt_text(analysis: dict[str, Any]) -> str:
+    etf_info = analysis["etf_info"]
+    symbol = analysis["symbol"]
+    prefix = _etf_alert_prefix(analysis)
+    return (
+        f"{prefix}{etf_info['name']}({symbol}) AI分析："
+        f"{analysis['final_action']}，準確率{analysis['confidence']}%，"
+        f"現價NT${analysis['latest_price']:.2f}"
+    )
+
+
+def build_etf_flex_card(analysis: dict[str, Any], compact: bool = False) -> dict:
+    """單支 ETF Flex Message。"""
     return {
         "type": "flex",
-        "altText": f"{alert_prefix}{etf_info['name']}({symbol}) AI分析：{final_action}，準確率{confidence}%，現價NT${price:.2f}",
-        "contents": bubble,
+        "altText": _etf_alt_text(analysis),
+        "contents": _build_etf_bubble(analysis, compact=compact),
     }
 
 
 def build_etf_carousel(*analyses: dict, compact: bool = False) -> dict:
-    """將任意數量 ETF 分析結果組合為 Carousel（左右滑動）。
-    
+    """將任意數量 ETF 分析結果組合為 Carousel（左右滑動，每支一張卡片）。
+
     Args:
         *analyses: ETF 分析結果
         compact: True 時使用精簡模式減少訊號數量，降低 JSON 大小
     """
-    bubbles = [build_etf_flex_card(a, compact=compact)["contents"] for a in analyses]
+    if not analyses:
+        raise ValueError("至少需一筆分析結果")
+    if len(analyses) == 1:
+        return build_etf_flex_card(analyses[0], compact=compact)
+
+    bubbles = [_build_etf_bubble(a, compact=compact) for a in analyses]
+    alert_prefix = ""
+    for analysis in analyses:
+        prefix = _etf_alert_prefix(analysis)
+        if prefix.startswith("🚨"):
+            alert_prefix = prefix
+            break
+        if prefix and not alert_prefix:
+            alert_prefix = prefix
+
     names = "、".join(a["symbol"] for a in analyses)
     return {
         "type": "flex",
-        "altText": f"ETF AI 多空分析（{names}）",
+        "altText": f"{alert_prefix}ETF AI 多空分析（{names}）",
         "contents": {
             "type": "carousel",
             "contents": bubbles,

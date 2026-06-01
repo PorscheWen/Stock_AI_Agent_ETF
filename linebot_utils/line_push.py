@@ -136,7 +136,7 @@ def push_single(symbol: str) -> None:
 
 
 def push_dual() -> None:
-    """同時分析全部 ETF，以 Carousel 推播給所有訂閱者。
+    """同時分析全部 ETF，以 Carousel 左右滑動卡片推播給所有訂閱者。
     若 Carousel 超過 50 KB 限制，則嘗試精簡版本或分別推播。
     """
     symbols = list(ETF_CONFIG.keys())
